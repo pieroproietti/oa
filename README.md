@@ -22,7 +22,7 @@ gcc src/*.c -Isrc -o vitellus -lm
 
 ## 📂 Task Structure (Example)
 
-Vitellus executes atomic operations based on JSON input or a plan.json file. 
+Vitellus executes atomic actions based on JSON input or a plan.json file. 
 
 For example, to prepare a work environment:
 
@@ -35,7 +35,7 @@ For example, to prepare a work environment:
 
 **Execution:**
 ```bash
-sudo ./vitellus prepare.json
+sudo ./vitellus actions/prepare.json
 ```
 or
 ```bash
