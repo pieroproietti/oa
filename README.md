@@ -2,51 +2,61 @@
 
 **Vitellus** (Latin for *yolk*) is a high-performance core engine written in C, designed for GNU/Linux system remastering. It was born to replace fragile and slow Bash scripting with the precision and power of native Linux kernel syscalls.
 
-Designed as an agnostic bridge between **penguins-eggs** and othere remastering tools like **MX-Snapshot**, Vitellus provides a clean, JSON-based interface to manage critical system-level operations.
+Designed as an agnostic bridge between **penguins-eggs** and other remastering tools like **MX-Snapshot** — the technical predecessor of penguins-eggs — Vitellus provides a clean, JSON-based interface to manage critical system-level operations.
 
 ## 🚀 Key Features
 
+* **Turbo SquashFS**: High-performance compression engine with automatic multi-core detection (`-processors`) and Zstd level tuning for maximum speed.
+* **Independent ISO Builder**: A standalone "Skeleton" engine inspired by the *AdrianTM* philosophy—extracting bootloaders and kernels directly from the host system without external dependencies.
 * **Safe Bind Mounts**: Manages system mounts (`/dev`, `/proc`, `/sys`) using private propagation (`MS_PRIVATE`) to ensure the host system remains untouched.
-* **Turbo Scan**: High-speed recursive filesystem scanning using the native `nftw` (New File Tree Walk) function.
-* **Smart Exclusions**: Supports complex exclusion lists (compatible with Refracta/Eggs formats) with intelligent branch skipping (`FTW_SKIP_SUBTREE`) for maximum efficiency.
+* **Smart Exclusions**: Supports complex exclusion lists with intelligent branch skipping (`FTW_SKIP_SUBTREE`) for maximum efficiency.
 * **Zero Dependencies**: Built with a minimalist philosophy. It only requires the [cJSON](https://github.com/DaveGamble/cJSON) library (included) and standard POSIX libraries.
 * **JSON-Driven**: Every action is defined by a JSON task file, making it trivial to integrate with Node.js, Python, or C++/Qt orchestrators.
 
-## 🛠 Compilation
+## 🛠 Prerequisites & Compilation
 
-Vitellus is built to be lightweight. To compile it within your development VM:
+Vitellus expects `squashfs-tools` and `xorriso` to be available on the host system. To compile:
 
 ```bash
-gcc src/*.c -Isrc -o vitellus -lm
+make
 ```
 
-## 📂 Task Structure (Example)
+## 📂 Plan Execution (The "Matrimonio")
 
-Vitellus executes atomic actions based on JSON input or a plan.json file. 
-
-For example, to prepare a work environment:
+Vitellus can execute complex workflows through a `plan.json`. This allows for a full remastering cycle in one shot:
 
 ```json
 {
-    "command": "action_prepare",
-    "pathLiveFs": "/home/eggs"
+  "pathLiveFs": "/home/eggs",
+  "plan": [
+    { "command": "action_prepare" },
+    { "command": "action_skeleton" },
+    { 
+      "command": "action_squash", 
+      "compression": "zstd", 
+      "compression_level": 3 
+    },
+    { 
+      "command": "action_iso", 
+      "volume_id": "VITELIUS_LIVE", 
+      "filename": "live-system.iso" 
+    },
+    { "command": "action_cleanup" }
+  ]
 }
 ```
 
 **Execution:**
-```bash
-sudo ./vitellus actions/prepare.json
-```
-or
 ```bash
 sudo ./vitellus plan.json
 ```
 
 ## 🗺 Roadmap
 
-- [ ] Filesystem Scanning with external exclusion file support.
 - [x] Secure Mount/Umount Engine.
-- [ ] Creating filesystem.squashfs and iso image
+- [x] Multi-core SquashFS creation.
+- [x] Standalone ISO Bootloader "Skeleton" (BIOS/UEFI).
+- [ ] Filesystem Scanning with external exclusion file support.
 - [ ] Implementation of Hooks for chroot customization.
 - [ ] Direct integration into `penguins-eggs` as the primary analysis engine.
 
