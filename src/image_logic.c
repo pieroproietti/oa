@@ -111,6 +111,23 @@ int action_squash(cJSON *json) {
 
     if (!cJSON_IsString(pathLiveFs)) return 1;
 
+    // --- LOGICA DI RISOLUZIONE EXCLUSION LIST ---
+    char final_exclude_path[1024] = "";
+    
+    // 1. Priorità: Percorso passato esplicitamente nel JSON
+    if (cJSON_IsString(exclude_file) && access(exclude_file->valuestring, F_OK) == 0) {
+        strncpy(final_exclude_path, exclude_file->valuestring, 1024);
+    } 
+    // 2. Fallback: Cerca nella cartella del progetto (per chi usa Vitellus standalone)
+    else if (access("./defaults/exclusion.list", F_OK) == 0) {
+        strncpy(final_exclude_path, "./defaults/exclusion.list", 1024);
+    }
+    // 3. Fallback: Percorso di sistema (per quando sarà installato via deb)
+    else if (access("/usr/share/vitellus/exclusion.list", F_OK) == 0) {
+        strncpy(final_exclude_path, "/usr/share/vitellus/exclusion.list", 1024);
+    }
+
+    // --- CONFIGURAZIONE TURBO ---
     long nprocs = sysconf(_SC_NPROCESSORS_ONLN);
     int level = cJSON_IsNumber(comp_lvl) ? comp_lvl->valueint : 3;
     const char *comp_str = cJSON_IsString(comp) ? comp->valuestring : "zstd";
@@ -119,6 +136,7 @@ int action_squash(cJSON *json) {
     snprintf(liveroot, 1024, "%s/liveroot", pathLiveFs->valuestring);
     snprintf(squash_out, 1024, "%s/iso/live/filesystem.squashfs", pathLiveFs->valuestring);
 
+    // Esclusioni di sessione (quelle "hardcoded" per la sicurezza del kernel)
     char session_excludes[4096] = "";
     const char *fexcludes[] = {
         "boot/efi/EFI", "boot/loader/entries/", "etc/fstab", "var/lib/docker/",
@@ -128,20 +146,31 @@ int action_squash(cJSON *json) {
 
     if (!cJSON_IsBool(include_root_home) || !include_root_home->valueint) {
         append_eggs_exclusion(session_excludes, 4096, "root/*");
+        append_eggs_exclusion(session_excludes, 4096, "root/.*");
     }
 
+    // --- COSTRUZIONE COMANDO ---
     char cmd[8192], comp_opts[256] = "";
     if (strcmp(comp_str, "zstd") == 0) snprintf(comp_opts, 256, "-Xcompression-level %d", level);
 
     snprintf(cmd, sizeof(cmd), "mksquashfs %s %s -comp %s %s -processors %ld -b 1M -noappend -wildcards", 
              liveroot, squash_out, comp_str, comp_opts, nprocs);
 
-    if (cJSON_IsString(exclude_file)) snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -ef %s", exclude_file->valuestring);
-    if (strlen(session_excludes) > 0) snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -e%s", session_excludes);
+    // Aggiungiamo la exclude list se ne abbiamo trovata una valida
+    if (strlen(final_exclude_path) > 0) {
+        printf("\033[1;34m[Vitellus]\033[0m Using exclusion list: %s\n", final_exclude_path);
+        snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -ef %s", final_exclude_path);
+    }
+
+    // Aggiungiamo le esclusioni di sessione forzate
+    if (strlen(session_excludes) > 0) {
+        snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -e%s", session_excludes);
+    }
 
     printf("\n\033[1;34m[Vitellus Turbo Squash]\033[0m Cores: %ld | Lvl: %d\n", nprocs, level);
     return system(cmd);
 }
+
 
 /**
  * @brief Genera la ISO avviabile con xorriso

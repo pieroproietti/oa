@@ -1,4 +1,4 @@
-// src/main.c (VERSIONE PLAN ENGINE - Consolidata)
+// src/main.c
 
 #include "cJSON.h"
 #include "exec_logic.h"
