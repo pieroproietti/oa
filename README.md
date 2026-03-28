@@ -126,4 +126,4 @@ sudo ./vitellus plan.json
 
 *Developed with the efficiency of C and the reliability of a Clipper '87 veteran.*
 
-> **Historical Note:** For a long time, I was convinced that my work was a direct descendant of *refracta-snapshot*. However, I recently discovered—directly from Adrian himself—that *refracta* is actually a derivative of his original project. 
+> **Historical Note:** From the start of penguins-eggs, I was convinced that my work was a direct descendant of *refracta-snapshot* and really it is. However, I recently discovered—directly from Adrian himself—that *refracta-snapshot* was another derivative of his original project. 
