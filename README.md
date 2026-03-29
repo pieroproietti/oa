@@ -2,7 +2,7 @@
 
 oa is a high-performance core engine written in C, designed for GNU/Linux system remastering. It replaces fragile and slow Bash scripting with the precision and power of native Linux kernel syscalls.
 
-Designed as a **standalone engine** to power **penguins-eggs** and other remastering tools like **MX-Snapshot** — the real father of penguins-eggs (*) — Vitellus provides a clean, JSON-based interface to manage critical system-level operations.
+Designed as a **standalone engine** to power **penguins-eggs** and other remastering tools like **MX-Snapshot** — the real father of penguins-eggs (*) — oa provides a clean, JSON-based interface to manage critical system-level operations.
 
 # The name oa
 The name oa is a tribute to the linguistic roots of Zagarolo, my native town. Following the Sack of Rome in 1527, the local population was decimated. To repopulate the area, families were brought in from the North-East.
@@ -20,7 +20,7 @@ oa is the local word for eggs. It represents the project's evolution: moving fro
 
 * **Independent ISO Builder**: A standalone "Skeleton" engine inspired by the *AdrianTM* philosophy—extracting bootloaders and kernels directly from the host system without external dependencies.
 
-* **Zero-Copy Filesystem Layering**: Vitellus eliminates the need for physical data duplication by projecting the host hierarchy (`/bin`, `/etc`, `/usr`, `/var`...) via Read-Only mounts. It utilizes **OverlayFS** to provide a writable environment for remastering without touching the underlying host data. Critical kernel interfaces (`/dev`, `/proc`, `/sys`, `/run`) are safely bind-mounted with private propagation (`MS_PRIVATE`) for a secure, zero-footprint operation.
+* **Zero-Copy Filesystem Layering**: oa eliminates the need for physical data duplication by projecting the host hierarchy (`/bin`, `/etc`, `/usr`, `/var`...) via Read-Only mounts. It utilizes **OverlayFS** to provide a writable environment for remastering without touching the underlying host data. Critical kernel interfaces (`/dev`, `/proc`, `/sys`, `/run`) are safely bind-mounted with private propagation (`MS_PRIVATE`) for a secure, zero-footprint operation.
 
 * **Smart Exclusions**: Supports complex exclusion lists with intelligent branch skipping (`FTW_SKIP_SUBTREE`) for maximum efficiency.
 
@@ -80,7 +80,7 @@ oa can execute complex workflows through a `plan.json`. This allows for a full r
 
       "command": "action_iso", 
 
-      "volume_id": "VITELIUS_LIVE", 
+      "volume_id": "OA_LIVE", 
 
       "filename": "live-system.iso" 
 
