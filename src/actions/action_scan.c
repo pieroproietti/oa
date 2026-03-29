@@ -1,11 +1,12 @@
 #define _XOPEN_SOURCE 500 // Necessario per nftw
-#include "scan_logic.h"
 #include "cJSON.h"
 #include <ftw.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "action_scan.h"
+
 
 // Usiamo una variabile globale (purtroppo richiesta dall'interfaccia di nftw)
 static uint64_t current_total_bytes = 0;
@@ -27,7 +28,10 @@ static int scan_callback(const char *fpath, const struct stat *sb, int tflag,
   return 0; // 0 significa "continua la scansione"
 }
 
-int cmd_scan(cJSON *json) {
+/**
+ * 
+ */
+int action_scan(cJSON *json) {
   cJSON *path_obj = cJSON_GetObjectItemCaseSensitive(json, "path");
 
   if (!cJSON_IsString(path_obj) || (path_obj->valuestring == NULL)) {

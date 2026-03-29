@@ -1,18 +1,13 @@
 {
   "pathLiveFs": "/home/eggs",
+  "mode": "clone",
+  "initrd_cmd": "mkinitramfs -o {{out}} {{ver}}",
   "plan": [
     { "command": "action_prepare" },
+    { "command": "action_initrd" }, 
     { "command": "action_skeleton" },
-    { 
-      "command": "action_squash", 
-      "compression": "zstd",
-      "compression_level": 3
-    },
-    { 
-      "command": "action_iso", 
-      "volume_id": "VITELLUS",
-      "filename": "egg-of_debian-trixie-colibri_amd64.iso" 
-    },
+    { "command": "action_squash" },
+    { "command": "action_iso" },
     { "command": "action_cleanup" }
   ]
 }

@@ -1,7 +1,6 @@
 // src/exec_logic.c (VERSIONE ACTION_RUN - MIRROR READY)
 
 #define _GNU_SOURCE
-#include "exec_logic.h"
 #include "cJSON.h"
 #include <errno.h>
 #include <stdio.h>
@@ -9,6 +8,7 @@
 #include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#include "action_run.h"
 
 static int execute_command(const char *chroot_path, const char *command,
                            char *const argv[]) {
