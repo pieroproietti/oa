@@ -1,18 +1,4 @@
-// src/main.c
-
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include "cJSON.h"
-#include "helpers.h"
-#include "action_prepare.h"
-#include "action_initrd.h"
-#include "action_skeleton.h"
-#include "action_run.h"
-#include "action_scan.h"
-#include "action_squash.h"
-#include "action_iso.h"
+#include "oa.h"
 
 // Helper per leggere il file JSON
 char *read_file(const char *filename) {
@@ -44,8 +30,8 @@ int execute_verb(cJSON *task) {
         return action_prepare(task);
     if (strcmp(command->valuestring, "action_initrd") == 0)
         return action_initrd(task);
-    if (strcmp(command->valuestring, "action_skeleton") == 0) 
-        return action_skeleton(task); 
+    if (strcmp(command->valuestring, "action_remaster") == 0) 
+        return action_remaster(task); 
     if (strcmp(command->valuestring, "action_cleanup") == 0)
         return action_cleanup(task);
     if (strcmp(command->valuestring, "action_run") == 0)
@@ -97,7 +83,7 @@ int main(int argc, char *argv[]) {
                 cJSON_AddItemToObject(task, "pathLiveFs", cJSON_Duplicate(global_path, 1));
             }
 
-            // 2. Ereditarietà mode (fondamentale per skeleton e squash)
+            // 2. Ereditarietà mode (fondamentale per remaster e squash)
             if (global_mode && !cJSON_GetObjectItemCaseSensitive(task, "mode")) {
                 cJSON_AddItemToObject(task, "mode", cJSON_Duplicate(global_mode, 1));
             }

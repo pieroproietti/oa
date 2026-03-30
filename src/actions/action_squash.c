@@ -1,14 +1,5 @@
-#include "cJSON.h"
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-#include <sys/utsname.h>
-
-#include "action_squash.h"
-#include "helpers.h" // Per append_eggs_exclusion
-#include "cJSON.h"
+#include "oa.h"
+#include "helpers.h"
 
 /**
  * @brief Crea il filesystem compresso SquashFS
@@ -24,20 +15,20 @@ int action_squash(cJSON *json) {
 
     const char *mode = (cJSON_IsString(mode_item)) ? mode_item->valuestring : "";
 
-    char final_exclude_path[1024] = "";
+    char final_exclude_path[PATH_SAFE] = "";
     if (cJSON_IsString(exclude_file) && access(exclude_file->valuestring, F_OK) == 0) {
-        strncpy(final_exclude_path, exclude_file->valuestring, 1024);
+        strncpy(final_exclude_path, exclude_file->valuestring, PATH_MAX);
     } else if (access("/usr/share/oa/exclusion.list", F_OK) == 0) {
-        strncpy(final_exclude_path, "/usr/share/oa/exclusion.list", 1024);
+        strncpy(final_exclude_path, "/usr/share/oa/exclusion.list", PATH_MAX);
     }
 
     long nprocs = sysconf(_SC_NPROCESSORS_ONLN);
     int level = cJSON_IsNumber(comp_lvl) ? comp_lvl->valueint : 3;
     const char *comp_str = cJSON_IsString(comp) ? comp->valuestring : "zstd";
 
-    char liveroot[1024], squash_out[1024];
-    snprintf(liveroot, 1024, "%s/liveroot", pathLiveFs->valuestring);
-    snprintf(squash_out, 1024, "%s/iso/live/filesystem.squashfs", pathLiveFs->valuestring);
+    char liveroot[PATH_SAFE], squash_out[PATH_SAFE];
+    snprintf(liveroot, PATH_SAFE, "%s/liveroot", pathLiveFs->valuestring);
+    snprintf(squash_out, PATH_SAFE, "%s/iso/live/filesystem.squashfs", pathLiveFs->valuestring);
 
     char session_excludes[4096] = "";
     const char *fexcludes[] = {
@@ -58,7 +49,7 @@ int action_squash(cJSON *json) {
              liveroot, squash_out, comp_str, comp_opts, nprocs);
 
     if (strlen(final_exclude_path) > 0) {
-        snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -ef %s", final_exclude_path);
+        snprintf(cmd + strlen(cmd), CMD_MAX - strlen(cmd), " -ef %s", final_exclude_path);
     }
     if (strlen(session_excludes) > 0) {
         snprintf(cmd + strlen(cmd), 8192 - strlen(cmd), " -e%s", session_excludes);

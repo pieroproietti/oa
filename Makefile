@@ -33,3 +33,7 @@ clean:
 	@rm -rf obj $(TARGET)
 
 .PHONY: all clean
+
+
+# Aggiungi -Wno-format-truncation alla fine
+CFLAGS = -Wall -Wextra -Iinclude -D_GNU_SOURCE -Wno-format-truncation
