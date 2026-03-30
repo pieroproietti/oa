@@ -5,14 +5,18 @@ CONTEST="CONTEST_${RAND_SUFFIX}.txt"
 (
   echo '````'
   for f in CHANGELOG.md \
-            GEMINI.md \
             README.md \
             include/oa.h \
             src/main.c \
+            src/actions/action_initrd.c \
+            src/actions/action_iso.c \
             src/actions/action_prepare.c \
             src/actions/action_remaster.c \
-            src/actions/action_users.c \
-            src/actions/action_squash.c; do
+            src/actions/action_run.c \
+            src/actions/action_scan.c \
+            src/actions/action_squash.c \
+            src/actions/action_users.c; 
+    do
     if [ -f "$f" ]; then
       echo "### 📄 FILE: $f"
       # Determina l'estensione per l'evidenziazione del codice
