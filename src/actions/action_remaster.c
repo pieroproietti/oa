@@ -1,4 +1,4 @@
-#include "action_skeleton.h"  // Il suo header
+#include "action_remaster.h"  // Il suo header
 #include "cJSON.h"           // Per manipolare i dati
 #include <stdio.h>           // Per printf, fprintf, snprintf, FILE, fopen
 #include <stdlib.h>          // Per system()
@@ -9,22 +9,21 @@
 /**
  * @brief Prepara la struttura della ISO, copia il kernel e configura il bootloader
  */
-int action_skeleton(cJSON *json) {
+int action_remaster(cJSON *json) {
     cJSON *pathLiveFs = cJSON_GetObjectItemCaseSensitive(json, "pathLiveFs");
     cJSON *mode_item = cJSON_GetObjectItemCaseSensitive(json, "mode");
     
     if (!cJSON_IsString(pathLiveFs)) return 1;
 
     const char *mode = (cJSON_IsString(mode_item)) ? mode_item->valuestring : "";
-
-    char iso_dir[1024], live_dir[1024], liveroot_dir[1024], isolinux_dir[1024];
+    char iso_dir[4096], live_dir[4096], liveroot_dir[4096], isolinux_dir[4096];
     snprintf(iso_dir, 1024, "%s/iso", pathLiveFs->valuestring);
     snprintf(live_dir, 1024, "%s/iso/live", pathLiveFs->valuestring);
     snprintf(isolinux_dir, 1024, "%s/iso/isolinux", pathLiveFs->valuestring);
     snprintf(liveroot_dir, 1024, "%s/liveroot", pathLiveFs->valuestring);
 
     // 1. Setup Struttura
-    char cmd[4096];
+    char cmd[8192];
     snprintf(cmd, sizeof(cmd), "mkdir -p %s %s %s", live_dir, iso_dir, isolinux_dir);
     system(cmd);
 
@@ -48,7 +47,7 @@ int action_skeleton(cJSON *json) {
     system(cmd);
 
     // 5. Configurazione Isolinux
-    char cfg_path[1024];
+    char cfg_path[4096];
     snprintf(cfg_path, 1024, "%s/isolinux.cfg", isolinux_dir);
     if (access(cfg_path, F_OK) != 0) {
         FILE *f = fopen(cfg_path, "w");

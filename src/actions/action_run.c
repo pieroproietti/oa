@@ -1,6 +1,5 @@
 // src/exec_logic.c (VERSIONE ACTION_RUN - MIRROR READY)
 
-#define _GNU_SOURCE
 #include "cJSON.h"
 #include <errno.h>
 #include <stdio.h>

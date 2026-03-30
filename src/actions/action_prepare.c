@@ -1,6 +1,5 @@
 // src/mount_logic.c (VERSIONE USRMERGE & MIRROR COMPLETO)
 
-#define _GNU_SOURCE
 #include "action_prepare.h"
 #include "cJSON.h"
 #include <errno.h>
@@ -44,7 +43,7 @@ static int fortified_bind_mount(const char *src, const char *tgt,
 }
 
 /**
- * action_prepare
+ * 
  */
 int action_prepare(cJSON *json) {
   cJSON *pathLiveFs = cJSON_GetObjectItemCaseSensitive(json, "pathLiveFs");
