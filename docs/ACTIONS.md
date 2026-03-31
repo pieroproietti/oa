@@ -5,99 +5,111 @@ Every operation in **oa** is driven by a JSON "Plan." This document defines the 
 ---
 
 ## 🏗️ 1. action_prepare
-**Purpose**: Initializes the Zero-Copy environment using OverlayFS.
+**Purpose**: Initializes the Zero-Copy environment using OverlayFS and bind mounts.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `pathLiveFs` | String | The base directory for the remastering process (e.g., `/home/eggs`). |
+| `pathLiveFs` | String | The base directory for the remastering process. |
 
 **Behavior**:
-1. Creates the directory structure: `iso/`, `liveroot/`, and `ovfs/` (upper/work).
-2. Bind-mounts kernel interfaces: `/dev`, `/proc`, `/sys`, `/run` into `liveroot/`.
-3. Performs the **OverlayFS** mount, projecting the host `/` into `liveroot/` as a writable layer.
-4. Uses `MS_PRIVATE` propagation to isolate mounts from the host.
+1. Creates the base directory structure: `liveroot/` and `.overlay/` (with `lowerdir`, `upperdir`, and `workdir` inside).
+2. Performs a physical copy of `/etc` to the `liveroot`.
+3. Bind-mounts root entries (e.g., `/bin`, `/sbin`, `/lib`) in read-only mode using `MS_PRIVATE` propagation.
+4. Projects `/usr` and `/var` using **OverlayFS** to allow modifications without touching the host.
+5. Bind-mounts kernel API filesystems: `/proc`, `/sys`, `/run`, `/dev` into `liveroot/`.
 
 ---
 
 ## 👤 2. action_users
-**Purpose**: Creates the Live user identity within the `liveroot`.
+**Purpose**: Creates the Live user identity within the `liveroot` independently, without relying on host binaries.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `name` | String | The username for the Live session (e.g., `oa`). |
-| `password` | String | The password for the Live user. |
-| `groups` | Array | List of system groups (e.g., `["sudo", "audio", "video"]`). |
+| `pathLiveFs` | String | The base directory for the remastering process. |
+| `users` | Array of Objects | Contains user definitions (`login`, `password`, `home`, `shell`, `gecos`). |
+| `mode` | String | Operation mode: `""` (default) or `"clone"`. |
 
 **Behavior**:
-1. Enters the `liveroot` via `chroot`.
-2. Executes `useradd` with UID 1000.
-3. Sets the password via `chpasswd`.
-4. Grants passwordless sudo privileges by creating `/etc/sudoers.d/oa-user`.
+1. If `mode` is not `"clone"`, purges host identities by sanitizing `/etc/passwd` and `/etc/group` (removing UIDs between 1000 and 59999).
+2. Opens `liveroot/etc/passwd` and `liveroot/etc/shadow` directly via C file streams.
+3. Writes the new user identities and passwords natively using Yocto-inspired helper functions.
+4. Creates the user's home directory and sets ownership to 1000:1000.
 
 ---
 
-## 💀 3. action_skeleton
-**Purpose**: Prepares the boot environment and manages user persistence based on the selected mode.
+## ⚙️ 3. action_initrd
+**Purpose**: Generates the Initial RAM Disk for the live session via template substitution.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `kernel_path` | String | Source path of the kernel (e.g., `/vmlinuz`). |
+| `pathLiveFs` | String | The base directory for the remastering process. |
 | `initrd_cmd` | String | Shell template to generate the initrd (e.g., `mkinitramfs -o {{out}} {{ver}}`). |
-| `groups` | Array | Default groups for the live user. |
-| `mode` | String | Operation mode: `""` (default), `"clone"`, or `"crypted"`. |
 
 **Behavior**:
-1. Copies the kernel image to `iso/live/vmlinuz`.
-2. Detects the kernel version and executes the `initrd_cmd` (injecting `{{out}}` and `{{ver}}`).
-3. Populates `iso/isolinux/` with bootloader binaries.
-4. **Logic by Mode**:
-   * `""` (Default): Removes all users with UID $\ge 1000$ and creates a fresh live user.
-   * `"crypted"`: Removes users with UID $\ge 1000$, encrypts system users, and creates a live user.
-   * `"clone"`: Keeps all existing users and configurations unchanged.
+1. Detects the host's kernel version using the `uname` syscall.
+2. Replaces the `{{out}}` placeholder with the target `initrd.img` path.
+3. Replaces the `{{ver}}` placeholder with the detected kernel version.
+4. Executes the finalized command to build the initramfs.
 
 ---
 
-## 📦 4. action_squash
+## 💀 4. action_remaster
+**Purpose**: Prepares the boot environment and populates Isolinux binaries.
+
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `pathLiveFs` | String | The base directory for the remastering process. |
+| `mode` | String | Operation mode, used to determine user persistence logic logging. |
+
+**Behavior**:
+1. Creates `iso/live` and `iso/isolinux` directories.
+2. Detects the kernel version and copies `vmlinuz` from `/boot` into the live directory.
+3. Copies ISOLINUX binaries and BIOS modules into `iso/isolinux/`.
+4. Generates a default `isolinux.cfg` boot menu if it does not already exist.
+
+---
+
+## 📦 5. action_squash
 **Purpose**: Compresses the `liveroot` into a high-performance SquashFS image.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
+| `pathLiveFs`| String | The base directory for the remastering process. |
 | `compression` | String | Algorithm (`zstd`, `xz`, `gzip`). Default: `zstd`. |
-| `compression_level` | Integer | Level (e.g., 1-22 for zstd). |
-| `exclude_list` | String | Path to patterns to exclude from compression. |
+| `compression_level` | Integer | Compression level (e.g., 1-22 for zstd). Defaults to 3. |
+| `exclude_list` | String | Path to a custom exclusion list file. |
 | `mode` | String | `""`, `"clone"`, or `"crypted"`. |
 
 **Behavior**:
-1. Detects CPU cores for multi-threaded compression.
-2. Applies the `exclude_list` and hardcoded session excludes (`/proc`, `/sys`, etc.).
+1. Detects available online CPU cores to pass to `mksquashfs`.
+2. Applies session exclusions including `/proc`, `/sys`, `/dev`, `/run`, and `/tmp`.
 3. **Logic by Mode**:
-   * If `mode == ""`, the `/home` directory is automatically added to the exclusion list.
-   * If `mode == "clone"` or `"crypted"`, the `/home` directory is included (unless specified in `exclude_list`).
-4. Generates the final `iso/live/filesystem.squashfs`.
+   * If `mode` is **NOT** `"clone"`, automatically excludes `home/*` and `root/*`.
+4. Uses the specified `exclude_list` if valid, otherwise falls back to `/usr/share/oa/exclusion.list`.
+5. Generates the `filesystem.squashfs` with the specified compression options.
 
 ---
 
-## 💿 5. action_iso
+## 💿 6. action_iso
 **Purpose**: Masters the final bootable ISO image.
 
 | Parameter | Type | Description |
 | :--- | :--- | :--- |
-| `volume_id` | String | The label of the ISO (e.g., `OA_LIVE`). |
-| `filename` | String | The output filename (e.g., `custom-live.iso`). |
+| `pathLiveFs`| String | The base directory for the remastering process. |
+| `volid` | String | The label of the ISO (e.g., `OA_LIVE`). |
+| `output_iso` | String | The output filename (e.g., `live-system.iso`). |
 
 **Behavior**:
-1. Invokes `xorriso` with hybrid boot support (BIOS/UEFI).
-2. Generates the ISO in the `pathLiveFs` root.
+1. Definitively constructs the `xorriso` command using a large `CMD_MAX` buffer.
+2. Configures the ISO with hybrid boot capabilities (`-isohybrid-mbr`) and an ISOLINUX bootloader.
+3. Writes the output file to the root of `pathLiveFs`.
 
 ---
 
-## 🧹 6. action_cleanup
-**Purpose**: Safely dismantles the Zero-Copy environment.
+## 🚀 7. action_run
+**Purpose**: Safely executes commands inside the `liveroot` chroot environment.
 
-**Behavior**:
-1. Recursively unmounts all bind-mounts and OverlayFS layers.
-2. Uses **lazy unmount** (`MNT_DETACH`) if resources are busy to ensure host stability.
-3. Deletes temporary workspace directories but preserves the generated ISO.
-
----
-*Blueprint for oa v0.2 - Developed by Piero Proietti*
+| Parameter | Type | Description |
+| :--- | :--- | :--- |
+| `pathLiveFs`| String | The base directory for the remastering process. |
+| `run_command`| String | The command binary to
