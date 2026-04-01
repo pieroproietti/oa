@@ -13,6 +13,7 @@ FILES=(
   context.sh
   CHANGELOG.md
   Makefile
+  MANIFESTUM.md
   README.md
   docs/*.md
   include/*.h
