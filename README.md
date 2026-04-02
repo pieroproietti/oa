@@ -19,7 +19,7 @@ We have transitioned to a monorepo structure to ensure perfect synchronization b
 - Interacting directly with the Linux Kernel and system binaries.
 - **Philosophy:** Performance, stability, and zero-dependency execution.
 
-### 🧠 [coa ('brooding' or 'hatching' in my dialect)](./coa) - The brain
+### 🧠 [coa (brooding or hatching in my dialect)](./coa) - The brain
 
 The name derives from the dialect word coa, referring to the act of nesting or incubating the eggs until they are ready to hatch.
 
