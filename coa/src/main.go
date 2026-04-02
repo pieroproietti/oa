@@ -24,10 +24,10 @@ func main() {
 		handleProduce(os.Args[2:], myDistro)
 	case "kill":
 		handleKill()
-	case "status":
-		handleStatus(myDistro)
+	case "detect":
+		handleDetect(myDistro)
 	case "version":
-		fmt.Printf("coa (Cova) v0.5.0 - The Mind of Artisan\n")
+		fmt.Printf("coa v0.1.0 - The Mind of remaster\n")
 	default:
 		fmt.Printf("\033[1;31mError:\033[0m Unknown command '%s'\n", os.Args[1])
 		printUsage()
@@ -88,9 +88,9 @@ func handleKill() {
 	}
 }
 
-// handleStatus mostra le info rilevate dal discovery
-func handleStatus(d *Distro) {
-	fmt.Println("\033[1;34m--- coa Status (The Mind) ---\033[0m")
+// handleDetect mostra le info rilevate dal discovery
+func handleDetect(d *Distro) {
+	fmt.Println("\033[1;34m--- coa distro detect ---\033[0m")
 	fmt.Printf("Host Distro:     %s\n", d.DistroID)
 	fmt.Printf("Family:          %s\n", d.FamilyID)
 	fmt.Printf("DistroLike:      %s\n", d.DistroLike)
@@ -133,6 +133,6 @@ func printUsage() {
 	fmt.Println("\nUsage:")
 	fmt.Println("  coa produce [--mode standard|clone|crypted] [--path /path]")
 	fmt.Println("  coa kill")
-	fmt.Println("  coa status")
+	fmt.Println("  coa detect")
 	fmt.Println("  coa version")
 }
