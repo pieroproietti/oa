@@ -6,21 +6,17 @@ shopt -s nullglob
 
 # Genera un numero casuale tra 000 e 999
 RAND_SUFFIX=$(printf "%03d" $((RANDOM % 1000)))
-CONTEXT="CONTEXT_${RAND_SUFFIX}.txt"
+CONTEXT="CONTEXT_COA_${RAND_SUFFIX}.txt"
 
 # Elenco dei file dinamico: bash espanderà in automatico i percorsi
 FILES=(
-  context.sh
-  CHANGELOG.md
-  Makefile
-  MANIFESTUM.md
-  README.md
   docs/*.md
-  include/*.h
-  json/*.json
-  src/*.c
-  src/actions/*.c
-  src/vendors/*.c
+  src/*
+  go.mod
+  go.sum
+  coa-contest.sh
+  Makefile
+  README.md
 )
 
 (
