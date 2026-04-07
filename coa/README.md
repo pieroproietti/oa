@@ -1,25 +1,40 @@
-# ROADMAP: coa (Orchestrator) 🗺️
+# coa 🥚
 
-The evolution of **coa** to reach functional parity with `penguins-eggs`.
+**coa** is the intelligent orchestrator written in Go, designed to be the "Mind" behind the GNU/Linux system remastering process. It acts as a high-level interface for the native **oa** engine, handling system analysis, flight plan generation, and abstracting distribution-specific differences.
 
-## ✅ Phase 1: The Nest (Completed)
-- [x] Base architecture in Go (monorepo).
-- [x] Integration with the C engine (`oa`).
-- [x] Distribution discovery (Mothers and Derivatives via YAML).
-- [x] Dynamic Flight Plan generation (in-memory JSON).
+## 🚀 Key Features
 
-## 🚧 Phase 2: The Brooding (In Progress - v0.5.x)
-- [x] **Advanced CLI**: Implementation of `produce`, `kill`, and `status` sub-commands.
-- [ ] **Validation Layer**: Pre-flight checks for disk space and root permissions.
-- [ ] **Log Streaming**: Clean visualization of logs originating from the C engine.
-- [ ] **Custom Excludes**: Management of dynamic exclusion lists.
+* **Distro-Agnostic Intelligence**: Automatically recognizes Debian, Arch, Fedora, and their derivatives.
+* **Initramfs Abstraction**: Delegates initrd generation to the engine via dynamic templates, supporting `mkinitcpio`, 9`dracut`, and `mkinitramfs`.
+* **Passepartout Bootloaders**: Manages the automatic download and injection of hybrid BIOS/UEFI bootloaders to ensure successful booting on any hardware.
+* **Bridge Configuration**: Implements physical patching of host configurations, such as `/etc/mkinitcpio.conf`, directly within the isolated working environment.
+* **JSON-Driven**: Compiles complex workflows into a standardized JSON format for atomic execution by the C engine.
 
-## 🥚 Phase 3: The Hatching (v0.6.x - v0.8.x)
-- [ ] **Wardrobe Integration**: Management of "costumes" (configurations) via Git/YAML.
-- [ ] **TUI (Terminal User Interface)**: Integration of `coa dad` and `coa mom` (visual configurators).
-- [ ] **Export Tools**: Automation for ISO uploading and checksum generation.
+## 🛠 Prerequisites
 
-## 🐧 Phase 4: Free Flight (v1.0.0)
-- [ ] **Krill Rebirth**: Integration of the new system installer.
-- [ ] **Functional Parity**: Achieving all core features of `penguins-eggs`.
-- [ ] **Documentation**: Automatically generated Wiki and man pages.
+* **Engine**: Requires the `oa` binary installed, typically in `/usr/local/bin/oa`.
+* **Tools**: `xorriso`, `squashfs-tools`, and `cryptsetup` for encrypted mode.
+
+## 📂 Usage
+
+```bash
+# Start a standard ISO production
+sudo coa produce --mode standard
+
+# Clean up the workspace and unmount filesystems
+sudo coa kill
+
+# Detect host distribution information
+coa detect
+```
+
+## 🏗 Architecture
+
+**coa** follows a "Mind and Body" philosophy. While the Go orchestrator handles the logic and planning, the C-native engine (**oa**) performs the heavy lifting using kernel syscalls, OverlayFS for zero-copy mirroring, and high-performance compression.
+
+## 🐧 Part of the penguins-eggs Ecosystem
+
+**coa** is a core component of the next-generation *penguins-eggs* infrastructure, aiming for maximum performance and native integration with modern Linux distributions.
+
+---
+*Developed with the efficiency of Go and the precision of a remastering artisan.*

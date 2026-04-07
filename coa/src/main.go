@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 )
 
 func main() {
@@ -37,52 +39,114 @@ func main() {
 
 // getOaPath cerca il braccio operativo (oa) nel sistema o nel percorso relativo
 func getOaPath() string {
-	// 1. Cerca nel PATH di sistema (es. /usr/local/bin/oa)
 	path, err := exec.LookPath("oa")
 	if err == nil {
 		return path
 	}
-
-	// 2. Fallback per lo sviluppo (se siamo nella cartella coa/)
 	if _, err := os.Stat("../oa/oa"); err == nil {
 		return "../oa/oa"
 	}
-
-	// 3. Fallback estremo (se siamo nella root artisan/)
 	if _, err := os.Stat("./oa/oa"); err == nil {
 		return "./oa/oa"
 	}
-
-	return "oa" // Ultima speranza: che sudo lo trovi da solo
+	return "oa"
 }
 
-// handleProduce gestisce la creazione della ISO (ex eggs produce)
+// bridgeConfigs sovrascrive la configurazione mkinitcpio nella liveroot per Arch
+func bridgeConfigs(d *Distro, workPath string) error {
+	if d.FamilyID != "archlinux" {
+		return nil
+	}
+
+	presetName := "live-arch.conf"
+	if d.DistroID == "manjaro" || d.DistroID == "biglinux" {
+		presetName = fmt.Sprintf("live-%s.conf", d.DistroID)
+	}
+
+	src := fmt.Sprintf("/tmp/coa/configs/mkinitcpio/%s", presetName)
+	// Destinazione: Sovrascriviamo il file standard per evitare parametri extra nel chroot
+	dst := filepath.Join(workPath, "liveroot", "etc", "mkinitcpio.conf")
+
+	fmt.Printf("\033[1;34m[coa]\033[0m Overwriting liveroot /etc/mkinitcpio.conf with %s...\n", presetName)
+
+	if err := copyFile(src, dst); err != nil {
+		return err
+	}
+
+	return os.Chmod(dst, 0644)
+}
+
+// copyFile è una utility per la copia fisica tra percorsi host
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
+}
+
+// handleProduce gestisce la creazione della ISO
 func handleProduce(args []string, d *Distro) {
 	produceCmd := flag.NewFlagSet("produce", flag.ExitOnError)
 	mode := produceCmd.String("mode", "standard", "standard, clone, or crypted")
 	workPath := produceCmd.String("path", "/home/eggs", "working directory")
 	produceCmd.Parse(args)
 
-	fmt.Printf("\033[1;32m[coa]\033[0m Starting production in \033[1m%s\033[0m mode...\n", *mode)
-	
-	// Generazione del piano dinamico in memoria (da plan.go)
+	// 1. Estrazione Assets Config sull'host
+	tempConfigPath := "/tmp/coa/configs"
+	fmt.Printf("\033[1;32m[coa]\033[0m Extracting internal configurations to %s...\n", tempConfigPath)
+	if err := ExtractConfigs(tempConfigPath); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Asset extraction failed: %v", err)
+	}
+
+	// 2. Download/Verifica Bootloaders (Indispensabile per action_iso)
+	fmt.Printf("\033[1;32m[coa]\033[0m Ensuring bootloaders are present in %s...\n", BootloaderRoot)
+	if _, err := EnsureBootloaders(); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Bootloader retrieval failed: %v", err)
+	}
+
+	// 3. Fase di Preparazione (Crea la liveroot tramite OverlayFS)
+	fmt.Printf("\033[1;32m[coa]\033[0m Preparing environment...\n")
+	prePlan := FlightPlan{
+		PathLiveFs: *workPath,
+		Mode:       *mode,
+		Plan:       []Action{{Command: "action_prepare"}},
+	}
+	executePlan(prePlan)
+
+	// 4. Ponte delle configurazioni (Host -> Liveroot)
+	if err := bridgeConfigs(d, *workPath); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Config bridging failed: %v", err)
+	}
+
+	// 5. Esecuzione del piano di produzione completo
+	fmt.Printf("\033[1;32m[coa]\033[0m Starting production flight...\n")
 	flightPlan := GeneratePlan(d, *mode, *workPath)
 	
-	// Passaggio al motore C
+	// Rimuoviamo action_prepare dal piano finale per evitare ri-montaggi
+	if len(flightPlan.Plan) > 0 && flightPlan.Plan[0].Command == "action_prepare" {
+		flightPlan.Plan = flightPlan.Plan[1:]
+	}
+
 	executePlan(flightPlan)
 }
 
 // handleKill gestisce la pulizia (ex eggs kill)
 func handleKill() {
-	fmt.Println("\033[1;33m[coa]\033[0m Freeing the nest... (Cleaning mounts and temp files)")
-	
+	fmt.Println("\033[1;33m[coa]\033[0m Freeing the nest...")
 	oaPath := getOaPath()
-	// Invochiamo oa con un argomento diretto di cleanup (oa deve saperlo gestire)
-	// o passiamo un mini-piano JSON di sola pulizia.
 	cmd := exec.Command("sudo", oaPath, "cleanup") 
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
 	if err := cmd.Run(); err != nil {
 		fmt.Printf("\033[1;31m[coa]\033[0m Cleanup failed: %v\n", err)
 	}
@@ -106,18 +170,14 @@ func executePlan(plan FlightPlan) {
 		log.Fatalf("\033[1;31m[coa]\033[0m JSON Error: %v", err)
 	}
 
-	// File temporaneo in /tmp per evitare problemi di permessi di scrittura locale
 	tmpJsonPath := "/tmp/plan_coa_tmp.json"
 	err = os.WriteFile(tmpJsonPath, jsonData, 0644)
 	if err != nil {
 		log.Fatalf("\033[1;31m[coa]\033[0m Temp file error: %v", err)
 	}
-	defer os.Remove(tmpJsonPath) // Pulizia automatica del JSON alla fine
+	defer os.Remove(tmpJsonPath)
 
 	oaPath := getOaPath()
-	fmt.Printf("\033[1;33m[coa]\033[0m Invoking engine: \033[1m%s\033[0m\n", oaPath)
-
-	// Chiamata definitiva al motore C tramite sudo
 	cmd := exec.Command("sudo", oaPath, tmpJsonPath)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
@@ -125,7 +185,6 @@ func executePlan(plan FlightPlan) {
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("\n\033[1;31m[coa]\033[0m Engine error: %v", err)
 	}
-	fmt.Println("\n\033[1;32m[coa]\033[0m Hatching completed successfully.")
 }
 
 func printUsage() {

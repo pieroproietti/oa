@@ -5,17 +5,17 @@ import (
 )
 
 // Action rappresenta un singolo blocco "command" nell'array "plan"
+// Viene utilizzato per mappare le azioni del motore C (oa) [cite: 31, 127, 282]
 type Action struct {
-	Command         string `json:"command"`
-	VolID           string `json:"volid,omitempty"`
-	OutputISO       string `json:"output_iso,omitempty"`
-	CryptedPassword string `json:"crypted_password,omitempty"`
+	Command         string   `json:"command"`
+	VolID           string   `json:"volid,omitempty"`
+	OutputISO       string   `json:"output_iso,omitempty"`
+	CryptedPassword string   `json:"crypted_password,omitempty"`
 	RunCommand      string   `json:"run_command,omitempty"`
-	Args            []string `json:"args,omitempty"`	
+	Args            []string `json:"args,omitempty"`
 }
 
-// src/plan.go
-
+// UserConfig definisce la struttura per la creazione nativa dell'utente live [cite: 319, 321]
 type UserConfig struct {
 	Login    string   `json:"login"`
 	Password string   `json:"password"`
@@ -25,41 +25,46 @@ type UserConfig struct {
 	Groups   []string `json:"groups"`
 }
 
+// FlightPlan è l'oggetto JSON principale inviato al motore oa [cite: 32, 146, 281]
 type FlightPlan struct {
 	PathLiveFs      string       `json:"pathLiveFs"`
 	Mode            string       `json:"mode"`
 	InitrdCmd       string       `json:"initrd_cmd"`
 	BootloadersPath string       `json:"bootloaders_path"`
-	Users           []UserConfig `json:"users"` // Array globale degli utenti
+	Users           []UserConfig `json:"users"` // Array globale degli utenti [cite: 32]
 	Plan            []Action     `json:"plan"`
 }
 
-
+// GeneratePlan costruisce il piano di volo dinamico in base alla distribuzione rilevata [cite: 333, 334]
 func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 	plan := FlightPlan{
 		PathLiveFs: workPath,
 		Mode:       mode,
 	}
 
-	// 1. Astrazione Initramfs e Bootloaders (Il Terzo Pilastro)
+	// 1. Astrazione Initramfs e Bootloaders (Il Terzo Pilastro) [cite: 80, 313, 324]
+	// Delega il comando di generazione dell'initrd all'orchestratore [cite: 325, 328]
 	switch d.FamilyID {
 	case "debian":
 		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
-		plan.BootloadersPath = "" // Su Debian usiamo quelli di sistema
+		plan.BootloadersPath = "" // Su Debian usiamo quelli di sistema [cite: 314]
 	case "archlinux":
+		// MODIFICA: Utilizziamo il flag -c per caricare la configurazione live 
+		// bridge-ata fisicamente da coa in /etc/mkinitcpio-live.conf.
+		// Spostato da /tmp a /etc per evitare problemi di permessi/mount nel chroot.
 		plan.InitrdCmd = "mkinitcpio -g {{out}} -k {{ver}}"
-		plan.BootloadersPath = BootloaderRoot
+		plan.BootloadersPath = BootloaderRoot // Utilizza bootloader esterni [cite: 36, 72]
 	case "fedora", "opensuse":
 		plan.InitrdCmd = "dracut --nomadas --force {{out}} {{ver}}"
 		plan.BootloadersPath = BootloaderRoot
 	default:
 		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
-		plan.BootloadersPath = "" 
+		plan.BootloadersPath = ""
 	}
 
-	// 2. Configurazione Utenti (Globale)
+	// 2. Configurazione Utenti (Globale) [cite: 237, 319, 452]
 	if mode == "standard" {
-		// Gestione dinamica dei gruppi admin
+		// Gestione dinamica dei gruppi admin (sudo vs wheel) [cite: 34, 274, 275]
 		adminGroup := "sudo"
 		if d.FamilyID == "archlinux" || d.FamilyID == "fedora" {
 			adminGroup = "wheel"
@@ -79,46 +84,34 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		plan.Users = []UserConfig{}
 	}
 
-	// 3. Assemblaggio dinamico della catena di montaggio
+	// 3. Assemblaggio dinamico della catena di montaggio [cite: 146, 290]
+	// NOTA: action_prepare viene omesso qui perché eseguito preventivamente 
+	// in handleProduce per permettere il bridging dei file [cite: 200, 248]
 	plan.Plan = []Action{
-		{Command: "action_prepare"},
-		{Command: "action_users"},
+		{Command: "action_users"},   // Identità nativa Yocto-style [cite: 237, 302]
 	}
 
 	// --- Task di "Vestizione" (Patching configurazioni) ---
-	// Se non siamo su Debian, iniettiamo i file estratti da coa nella liveroot
-	if d.FamilyID != "debian" {
-		configSrc := ""
-		configDest := ""
-
-		switch d.FamilyID {
-		case "archlinux":
-			configSrc = "/tmp/coa/configs/mkinitcpio/arch/."
-			configDest = "/etc/mkinitcpio.d/"
-		case "fedora":
-			configSrc = "/tmp/coa/configs/dracut/."
-			configDest = "/etc/dracut.conf.d/"
-		}
-
-		if configSrc != "" {
-			plan.Plan = append(plan.Plan, Action{
-				Command:    "action_run",
-				RunCommand: "cp",
-				Args:       []string{"-r", configSrc, configDest},
-			})
-		}
+	// Per Arch Linux la vestizione è gestita esternamente via bridge fisso in /etc.
+	// Per Fedora manteniamo l'iniezione standard in dracut.conf.d [cite: 314, 337]
+	if d.FamilyID == "fedora" {
+		plan.Plan = append(plan.Plan, Action{
+			Command:    "action_run", // Esegue il comando dentro il chroot [cite: 210, 213]
+			RunCommand: "cp",
+			Args:       []string{"/tmp/coa/configs/dracut/fedora.conf", "/etc/dracut.conf.d/coa.conf"},
+		})
 	}
 
-	// Proseguiamo con il resto del piano standard
+	// Proseguiamo con il resto del piano standard [cite: 146]
 	plan.Plan = append(plan.Plan, 
-		Action{Command: "action_initrd"},
-		Action{Command: "action_livestruct"},
-		Action{Command: "action_isolinux"},
-		Action{Command: "action_uefi"},
-		Action{Command: "action_squash"},
+		Action{Command: "action_initrd"},     // Generazione ramdisk [cite: 180, 307]
+		Action{Command: "action_livestruct"}, // Kernel extraction [cite: 196, 578]
+		Action{Command: "action_isolinux"},   // BIOS bootloader [cite: 192, 565]
+		Action{Command: "action_uefi"},       // UEFI bootloader [cite: 234, 305]
+		Action{Command: "action_squash"},     // Compressione Turbo SquashFS [cite: 137, 220]
 	)
 
-	// Inserzione modulare per cifratura
+	// Inserzione modulare per cifratura [cite: 173, 505]
 	if mode == "crypted" {
 		plan.Plan = append(plan.Plan, Action{
 			Command:         "action_crypted",
@@ -126,7 +119,7 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		})
 	}
 
-	// 4. Generazione ISO e chiusura
+	// 4. Generazione ISO e chiusura [cite: 186, 542]
 	isoName := fmt.Sprintf("egg-of_%s-%s-oa_amd64.iso", d.DistroID, d.CodenameID)
 	
 	plan.Plan = append(plan.Plan, Action{
@@ -135,7 +128,7 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		OutputISO: isoName,
 	})
 	
-	plan.Plan = append(plan.Plan, Action{Command: "action_cleanup"})
+	plan.Plan = append(plan.Plan, Action{Command: "action_cleanup"}) // Smontaggio sicuro [cite: 68, 168]
 
 	return plan
 }
