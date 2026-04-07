@@ -4,17 +4,21 @@
 # invece di restituire la stringa letterale "*.c"
 shopt -s nullglob
 
+rm CONTEXT_COA*
+
 # Genera un numero casuale tra 000 e 999
 RAND_SUFFIX=$(printf "%03d" $((RANDOM % 1000)))
 CONTEXT="CONTEXT_COA_${RAND_SUFFIX}.txt"
 
 # Elenco dei file dinamico: bash espanderà in automatico i percorsi
 FILES=(
-  docs/*.md
-  src/*
-  m
-  context-coa.sh
-  README.md
+  ./m                # Makefile
+  ./go.mod           # Dipendenze
+  ./src/*.go         # Logica core in Go
+  ./conf/*.yaml      # Configurazioni principali
+  ./docs/ROADMAP.md  # Obiettivi del progetto
+  ./README.md        # Documentazione generale
+  ./context-coa.sh   # Lo script stesso
 )
 
 (

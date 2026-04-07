@@ -2,6 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"time"
 )
 
 // Action rappresenta un singolo blocco "command" nell'array "plan"
@@ -49,7 +53,7 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
 		plan.BootloadersPath = "" // Su Debian usiamo quelli di sistema [cite: 314]
 	case "archlinux":
-		// MODIFICA: Utilizziamo il flag -c per caricare la configurazione live 
+		// MODIFICA: Utilizziamo il flag -c per caricare la configurazione live
 		// bridge-ata fisicamente da coa in /etc/mkinitcpio-live.conf.
 		// Spostato da /tmp a /etc per evitare problemi di permessi/mount nel chroot.
 		plan.InitrdCmd = "mkinitcpio -g {{out}} -k {{ver}}"
@@ -85,10 +89,10 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 	}
 
 	// 3. Assemblaggio dinamico della catena di montaggio [cite: 146, 290]
-	// NOTA: action_prepare viene omesso qui perché eseguito preventivamente 
+	// NOTA: action_prepare viene omesso qui perché eseguito preventivamente
 	// in handleProduce per permettere il bridging dei file [cite: 200, 248]
 	plan.Plan = []Action{
-		{Command: "action_users"},   // Identità nativa Yocto-style [cite: 237, 302]
+		{Command: "action_users"}, // Identità nativa Yocto-style [cite: 237, 302]
 	}
 
 	// --- Task di "Vestizione" (Patching configurazioni) ---
@@ -103,7 +107,7 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 	}
 
 	// Proseguiamo con il resto del piano standard [cite: 146]
-	plan.Plan = append(plan.Plan, 
+	plan.Plan = append(plan.Plan,
 		Action{Command: "action_initrd"},     // Generazione ramdisk [cite: 180, 307]
 		Action{Command: "action_livestruct"}, // Kernel extraction [cite: 196, 578]
 		Action{Command: "action_isolinux"},   // BIOS bootloader [cite: 192, 565]
@@ -119,16 +123,51 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		})
 	}
 
-	// 4. Generazione ISO e chiusura [cite: 186, 542]
-	isoName := fmt.Sprintf("egg-of_%s-%s-oa_amd64.iso", d.DistroID, d.CodenameID)
-	
+	// definizione di isoname
+
+	// 1. Recuperiamo l'hostname (es. colibri)
+	hostname, _ := os.Hostname()
+
+	// 2. Generiamo il timestamp nel formato richiesto (2026-04-07_0930)
+	timestamp := time.Now().Format("2006-01-02_1504")
+
+	// 3. Rileviamo l'architettura della CPU
+	arch := runtime.GOARCH
+	if arch == "amd64" {
+		// arch = "x86_64"
+	}
+
+	// 4. Prepariamo i componenti del nome
+	var nameParts []string
+	nameParts = append(nameParts, d.DistroID)
+
+	// Priorità: Codename > Release [cite: 316, 342]
+	if d.CodenameID != "" {
+		nameParts = append(nameParts, d.CodenameID)
+	} else if d.ReleaseID != "" {
+		nameParts = append(nameParts, d.ReleaseID)
+	}
+
+	// Aggiungiamo l'hostname
+	if hostname != "" {
+		nameParts = append(nameParts, hostname)
+	}
+
+	// 5. Uniamo i componenti base (es. arch-rolling-colibri)
+	distroTag := strings.Join(nameParts, "-")
+
+	// 6. Assembliamo il nome finale con timestamp e architettura
+	// Formato: egg-of_distro-info-host_timestamp_arch.iso
+	isoName := fmt.Sprintf("egg-of_%s_%s_%s.iso", distroTag, arch, timestamp)
+
+	// --- Inserimento dell'azione nel piano per il motore oa --- [cite: 32, 146]
 	plan.Plan = append(plan.Plan, Action{
 		Command:   "action_iso",
 		VolID:     "OA_LIVE",
 		OutputISO: isoName,
 	})
-	
-	plan.Plan = append(plan.Plan, Action{Command: "action_cleanup"}) // Smontaggio sicuro [cite: 68, 168]
+
+	plan.Plan = append(plan.Plan, Action{Command: "action_cleanup"}) // [cite: 68, 172]
 
 	return plan
 }
