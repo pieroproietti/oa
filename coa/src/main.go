@@ -68,6 +68,15 @@ func main() {
 		},
 	}
 
+	// --- KRILL COMMAND ---
+	var krillCmd = &cobra.Command{
+		Use:   "krill",
+		Short: "Start the system installation (The Hatching)",
+		Run: func(cmd *cobra.Command, args []string) {
+			handleKrill()
+		},
+	}
+
 	// --- ADAPT COMMAND ---
 	var adaptCmd = &cobra.Command{
 		Use:   "adapt",
@@ -97,7 +106,7 @@ func main() {
 	}
 
 	// Assemblaggio dei comandi
-	rootCmd.AddCommand(produceCmd, exportCmd, killCmd, detectCmd, adaptCmd, versionCmd, docsCmd)
+	rootCmd.AddCommand(produceCmd, exportCmd, killCmd, detectCmd, adaptCmd, versionCmd, docsCmd, krillCmd)
 
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
