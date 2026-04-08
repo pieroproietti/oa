@@ -1,6 +1,21 @@
-# Changelog - `oa` (Output Artisan) Project
+# Changelog - oa-tools
 
-All notable changes to this project will be documented in this file.
+## [0.5.1] - 2026-04-08
+
+### [coa] Orchestrator (The Mind)
+- **New Build System**: Added `coa build` to automate C/Go compilation and native packaging (`.deb`, `PKGBUILD`).
+- **Dynamic Exclusions**: Now generates runtime exclusion lists for SquashFS, moving logic away from the C engine.
+- **Auto-Docs**: Integrated `coa docs` to generate man pages and shell completions (Bash, Zsh, Fish).
+- **Version Controller**: Established as the Single Source of Truth for the entire project versioning.
+
+### [oa] Engine (The Body)
+- **Decoupled Logic**: Removed hardcoded exclusion arrays in `lay_squash.c` in favor of dynamic `-ef` flags.
+- **Version Injection**: The engine now receives its version string during compilation via Makefile macros.
+- **Streamlined Execution**: Focused the C core on pure system actions, delegating policy-making to the orchestrator.
+
+### [General]
+- **Git Hygiene**: Optimized `.gitignore` to keep the repository clean from build artifacts.
+- **Single Source of Truth**: Centralized versioning in `build.go`.
 
 ## [v0.5.0] - 2026-04-02
 
