@@ -54,7 +54,9 @@ int execute_verb(cJSON *root, cJSON *task) {
     else if (strcmp(cmd_name, "hatch_partition") == 0) status = hatch_partition(&ctx);
     else if (strcmp(cmd_name, "hatch_format") == 0)    status = hatch_format(&ctx);
     else if (strcmp(cmd_name, "hatch_unpack") == 0)    status = hatch_unpack(&ctx);
-    // TODO: Aggiungeremo hatch_fstab, hatch_users, hatch_uefi qui appena li creiamo
+    else if (strcmp(cmd_name, "hatch_fstab") == 0)     status = hatch_fstab(&ctx);
+    else if (strcmp(cmd_name, "hatch_users") == 0)     status = hatch_users(&ctx);
+    else if (strcmp(cmd_name, "hatch_uefi") == 0)      status = hatch_uefi(&ctx);    
 
     // --- FASE 3: SYS (Utility Generiche) ---
     else if (strcmp(cmd_name, "sys_run") == 0)         status = sys_run(&ctx);
