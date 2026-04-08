@@ -4,34 +4,17 @@
   "initrd_cmd": "mkinitramfs -o {{out}} {{ver}}",
   "bootloaders_path": "",
   "plan": [
+    { "command": "lay_prepare" },
+    { "command": "lay_users" },
+    { "command": "lay_initrd" },
+    { "command": "lay_livestruct" },
+    { "command": "lay_uefi" },    
+    { "command": "lay_squash" },
     {
-      "command": "action_prepare"
-    },
-    {
-      "command": "action_users"
-    },
-    {
-      "command": "action_initrd"
-    },
-    {
-      "command": "action_livestruct"
-    },
-    {
-      "command": "action_uefi"
-    },    
-    {
-      "command": "action_squash"
-    },
-    {
-      "command": "action_squash"
-    },
-    {
-      "command": "action_iso",
-      "volid": "EGGS_CUSTOM_2026",
+      "command": "lay_iso",
+      "volid": "OA_CLONE_2026",
       "output_iso": "egg-of_debian-trixie-oa_amd64.iso"
     },
-    {
-      "command": "action_cleanup"
-    }
+    { "command": "lay_cleanup" }
   ]
 }

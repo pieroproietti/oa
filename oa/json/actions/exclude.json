@@ -1,8 +1,0 @@
-{
-    "command": "scan",
-    "path": "/",
-    "exclude_file": "/etc/penguins-eggs/exclude.list.d/master.list",
-    "exclude": [
-        "/home/artisan/esperimenti/*"
-    ]
-}

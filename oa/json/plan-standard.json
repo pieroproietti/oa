@@ -11,47 +11,24 @@
       "home": "/home/live",
       "shell": "/bin/bash",
       "groups": [
-        "cdrom",
-        "floppy",
-        "sudo",
-        "audio",
-        "dip",
-        "video",
-        "plugdev",
-        "netdev",
-        "autologin"
+        "cdrom", "floppy", "sudo", "audio", "dip",
+        "video", "plugdev", "netdev", "autologin"
       ]
     }
   ],
   "plan": [
+    { "command": "lay_prepare" },
+    { "command": "lay_users" },
+    { "command": "lay_initrd" },
+    { "command": "lay_livestruct" },
+    { "command": "lay_isolinux" },
+    { "command": "lay_uefi" },
+    { "command": "lay_squash" },
     {
-      "command": "action_prepare"
-    },
-    {
-      "command": "action_users"
-    },
-    {
-      "command": "action_initrd"
-    },
-    {
-      "command": "action_livestruct"
-    },
-    {
-      "command": "action_isolinux"
-    },
-    {
-      "command": "action_uefi"
-    },
-    {
-      "command": "action_squash"
-    },
-    {
-      "command": "action_iso",
-      "volid": "EGGS_CUSTOM_2026",
+      "command": "lay_iso",
+      "volid": "OA_LIVE_2026",
       "output_iso": "egg-of_debian-trixie-oa_amd64.iso"
     },
-    {
-      "command": "action_cleanup"
-    }
+    { "command": "lay_cleanup" }
   ]
 }
