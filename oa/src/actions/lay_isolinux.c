@@ -24,7 +24,8 @@ int lay_isolinux(OA_Context *ctx) {
     snprintf(isolinux_dir, PATH_SAFE, "%s/iso/isolinux", pathLiveFs->valuestring);
 
     char cmd[CMD_MAX];
-    system("mkdir -p %s", isolinux_dir);
+    snprintf(cmd, sizeof(cmd), "mkdir -p %s", isolinux_dir);
+    system(cmd);
 
     const char *prefix = (cJSON_IsString(bootloaders_path) && strlen(bootloaders_path->valuestring) > 0) 
                          ? bootloaders_path->valuestring : "";

@@ -105,7 +105,7 @@ func GeneratePlan(d *Distro, mode string, workPath string) FlightPlan {
 		plan.BootloadersPath = ""
 	case "archlinux":
 		// Il trucco di Arch: base dir e label per archiso
-		bootParams = "archisobasedir=live archisolabel=OA_LIVE quiet splash"
+		// bootParams = "archisobasedir=live archisolabel=OA_LIVE quiet splash"
 		plan.InitrdCmd = "mkinitcpio -g {{out}} -k {{ver}}"
 		plan.BootloadersPath = BootloaderRoot
 	case "fedora", "opensuse":
