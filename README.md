@@ -47,10 +47,16 @@ The name derives from the dialect word coa, referring to the act of brooding or 
 
 **Language: Go**
 Actual commands
-- detect
-- kill
-- produce
-- version
+- adapt       Adapt monitor resolution for VMs
+- build       Compile binaries and generate native distribution packages (.deb, PKGBUILD)
+- completion  Generate the autocompletion script for the specified shell
+- detect      Show host distribution discovery info
+- export      Export artifacts (iso, pkg) to a remote Proxmox storage
+- help        Help about any command
+- kill        Free the nest and unmount filesystems
+- krill       Start the system installation (The Hatching)
+- produce     Start a system remastering production flight
+- version     Print the version number of coa
 ---
 
 ## 🚀 Getting Started
