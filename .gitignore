@@ -29,6 +29,7 @@ coa/oa.log
 plan_coa_tmp.json
 coa/plan_coa_tmp.json
 *.tmp
+*.log
 
 # --- OS generated files ---
 .DS_Store
