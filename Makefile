@@ -29,7 +29,10 @@ build_oa:
 build_coa:
 	@echo "  MAKING coa (Version: $(VERSION))..."
 	@cd $(COA_DIR) && go build -ldflags "-X 'coa/src/cmd.AppVersion=$(VERSION)'" -o coa ./src
-
+	@echo "  GENERATING DOCUMENTATION..."
+	@# Usiamo COA_DIR (che è 'coa') per dire al binario dove scrivere
+	@./$(COA_BIN) man --target ./$(COA_DIR)/docs
+	
 clean:
 	@echo "  Pulizia in corso..."
 	@$(MAKE) -C $(OA_DIR) clean
