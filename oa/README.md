@@ -73,12 +73,12 @@ sudo ./oa plan.json
 3. **The Initramfs Abstraction**
 4. **The "Eggs vs Bananas" Biological Diversity Paradigm**
 
-To fully understand the architecture and the strategy behind this engine, please read the [Universal Remastering Strategy](docs/UNIVERSAL_STRATEGY.md) and the [Architecture Guide](docs/ARCHITECTURE.md).
+To fully understand the architecture and the strategy behind this engine, please read the [Universal Remastering Strategy](../DOCS/UNIVERSAL_STRATEGY.md) and the [Architecture Guide](../DOCS/ARCHITECTURE.md).
 
 ## 🗺 Roadmap
 
 The development goals and future milestones have been moved to a dedicated document. 
-Please refer to the [ROADMAP](docs/ROADMAP.md) for details on upcoming features and tracking.
+Please refer to the [ROADMAP](../DOCS/ROADMAP.md) for details on upcoming features and tracking.
 
 ---
 *Developed with the efficiency of C and the reliability of a Clipper '87 veteran.*
