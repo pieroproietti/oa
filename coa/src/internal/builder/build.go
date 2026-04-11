@@ -128,7 +128,7 @@ func buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion string) {
 
 	// Documentazione
 	manDir := filepath.Join(buildDir, "usr/share/man/man1")
-	exec.Command("sh", "-c", fmt.Sprintf("cp %s/docs/man/* %s/ && gzip -9 %s/*", coaDir, manDir, manDir)).Run()
+	exec.Command("sh", "-c", fmt.Sprintf("cp %s/docs/man/*.1 %s/ && gzip -9 %s/*.1", coaDir, manDir, manDir)).Run()
 
 	// Completamenti
 	copyFile(filepath.Join(coaDir, "docs/completion/coa.bash"), filepath.Join(buildDir, "usr/share/bash-completion/completions/coa"))
@@ -165,7 +165,6 @@ Description: coa is the mind and oa the arm
 }
 
 func buildArchPackage(projRoot, baseVer, relNum string) {
-	// Pulizia di eventuali spazi non standard o caratteri invisibili
 	pkgbuildContent := fmt.Sprintf(`# Maintainer: Piero Proietti <piero.proietti@gmail.com>
 pkgname=oa-tools
 pkgver=%s
@@ -179,7 +178,8 @@ conflicts=('penguins-eggs')
 package() {
     install -Dm755 "${startdir}/oa/oa" "${pkgdir}/usr/local/bin/oa"
     install -Dm755 "${startdir}/coa/coa" "${pkgdir}/usr/local/bin/coa"
-    install -Dm644 "${startdir}/coa/docs/man/"* -t "${pkgdir}/usr/share/man/man1/"
+    # CORREZIONE: Prende solo i file .1 ignorando le sottocartelle
+    install -Dm644 "${startdir}/coa/docs/man/"*.1 -t "${pkgdir}/usr/share/man/man1/"
     install -Dm644 "${startdir}/coa/docs/completion/coa.bash" "${pkgdir}/usr/share/bash-completion/completions/coa"
     install -Dm644 "${startdir}/coa/docs/completion/coa.zsh" "${pkgdir}/usr/share/zsh/vendor-completions/_coa"
     install -Dm644 "${startdir}/coa/docs/completion/coa.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/coa.fish"
