@@ -15,6 +15,7 @@ TARGET="$REMOTE_USER@$REMOTE_HOST"
 RAND_SUFFIX=$(printf "%03d" $((RANDOM % 1000)))
 FILE_OA="CONTEXT_OA_${RAND_SUFFIX}.txt"
 FILE_COA="CONTEXT_COA_${RAND_SUFFIX}.txt"
+FILE_DOCS="CONTEXT_DOCS_${RAND_SUFFIX}.txt"
 
 echo -e "\033[1;34m[Context Builder]\033[0m Session: \033[1m$RAND_SUFFIX\033[0m"
 
@@ -78,9 +79,15 @@ FILES_COA=(
     coa/docs/ROADMAP.md
 )
 
+# FILES_DOCS: la documentazione
+FILES_DOCS=(
+    DOCS/**/*.md
+)
+
 # 4. Costruzione locale dei pacchetti di contesto
 build_context "$FILE_OA" "${FILES_OA[@]}"
 build_context "$FILE_COA" "${FILES_COA[@]}"
+build_context "$FILE_DOCS" "${FILES_DOCS[@]}"
 
 # Disabilita le opzioni shell extra
 shopt -u nullglob
@@ -90,9 +97,9 @@ shopt -u globstar
 echo -e "\033[1;32m[SYNC]\033[0m Pulizia remota e trasferimento in corso..."
 
 # Usiamo tar per impacchettare, inviare e scompattare in un unico tunnel SSH
-tar -cf - "$FILE_OA" "$FILE_COA" | ssh "$TARGET" "cd $DEST_PATH && rm -f CONTEXT_OA_*.txt CONTEXT_COA_*.txt && tar -xf -"
+tar -cf - "$FILE_OA" "$FILE_COA" "$FILE_DOCS"| ssh "$TARGET" "cd $DEST_PATH && rm -f CONTEXT_OA_*.txt CONTEXT_COA_*.txt CONTEXT_DOCS_*.txt && tar -xf -"
 
 # 6. Pulizia locale dei file temporanei
-rm "$FILE_OA" "$FILE_COA"
+rm "$FILE_OA" "$FILE_COA" "$FILE_DOCS" 
 
 echo -e "\033[1;32m[OK]\033[0m Sincronizzazione completata! (California dreaming... 🚲)"
