@@ -102,9 +102,12 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	}
 
 	// 1. Configurazione Parametri di Boot
-	bootParams := "boot=live components quiet splash"
-	if d.FamilyID == "archlinux" {
-		bootParams = "archisobasedir=arch archisolabel=OA_LIVE quiet splash"
+	bootParams := "boot=live components"
+	switch d.FamilyID {
+	case "archlinux":
+		bootParams = "archisobasedir=arch archisolabel=OA_LIVE"
+	case "fedora", "rhel", "centos", "rocky", "almalinux", "opensuse":
+		bootParams = "root=live:CDLABEL=OA_LIVE rd.live.image rd.live.dir=live rd.live.squashimg=filesystem.squashfs selinux=0"
 	}
 
 	// SWITCH PER L'INITRAMFS
@@ -114,8 +117,9 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	case "archlinux":
 		// Interno a chroot
 		plan.InitrdCmd = fmt.Sprintf("mkinitcpio -c %s/liveroot/etc/mkinitcpio.conf -g {{out}} -k {{ver}}", workPath)
-	case "fedora", "opensuse":
-		plan.InitrdCmd = "dracut --nomadas --force {{out}} {{ver}}"
+	case "fedora", "rhel", "centos", "rocky", "almalinux":
+		// Interno a chroot
+		plan.InitrdCmd = "dracut --no-hostonly --nomdadmconf --nolvmconf --xz --add dmsquash-live --add rootfs-block --add bash --force {{out}} {{ver}}"
 	default:
 		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
 	}
@@ -123,7 +127,7 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	// 2. Configurazione Utenti (Globale)
 	if mode == "standard" {
 		adminGroup := "sudo"
-		if d.FamilyID == "archlinux" || d.FamilyID == "fedora" {
+		if d.FamilyID == "archlinux" || d.FamilyID == "fedora" || d.FamilyID == "rhel" || d.FamilyID == "centos" || d.FamilyID == "rocky" || d.FamilyID == "almalinux" {
 			adminGroup = "wheel"
 		}
 
@@ -146,12 +150,30 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 		{Command: "lay_users"},
 	}
 
-	// Task specifici per Fedora
-	if d.FamilyID == "fedora" {
+	// Task specifici per Fedora/RHEL
+	if d.FamilyID == "fedora" || d.FamilyID == "rhel" || d.FamilyID == "centos" || d.FamilyID == "rocky" || d.FamilyID == "almalinux" {
+		
+		targetConfDir := fmt.Sprintf("%s/liveroot/etc/dracut.conf.d", workPath)
+		targetConfPath := fmt.Sprintf("%s/coa.conf", targetConfDir) 
+
+		// Prepariamo il testo del file formattato per il comando echo -e
+		dracutConfig := `hostonly="no"\nadd_dracutmodules+=" dmsquash-live rootfs-block bash "\ncompress="xz"`
+		
+		// Costruiamo il comando shell che scrive direttamente il file
+		writeCmd := fmt.Sprintf(`echo -e '%s' > %s`, dracutConfig, targetConfPath)
+
+		// 1. Assicuriamoci che la cartella esista
 		plan.Plan = append(plan.Plan, Action{
 			Command:    "sys_run",
-			RunCommand: "cp",
-			Args:       []string{"/tmp/coa/configs/dracut/fedora.conf", "/etc/dracut.conf.d/coa.conf"},
+			RunCommand: "mkdir",
+			Args:       []string{"-p", targetConfDir},
+		})
+
+		// 2. Scriviamo il file a destinazione usando sh -c (nessun file temporaneo perso nei mount!)
+		plan.Plan = append(plan.Plan, Action{
+			Command:    "sys_run",
+			RunCommand: "sh",
+			Args:       []string{"-c", writeCmd},
 		})
 	}
 
