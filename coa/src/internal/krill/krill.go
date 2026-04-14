@@ -15,6 +15,7 @@ import (
 	"github.com/AlecAivazis/survey/v2"
 
 	// Importiamo l'engine per usare le sue strutture dati (FlightPlan, Action, ecc.)
+	"coa/src/internal/distro"
 	"coa/src/internal/engine"
 )
 
@@ -28,7 +29,7 @@ type KrillAnswers struct {
 }
 
 // HandleKrill avvia l'interfaccia interattiva
-func HandleKrill() {
+func HandleKrill(d *distro.Distro) {
 	fmt.Println("\033[1;36m====================================================\033[0m")
 	fmt.Println("\033[1;36m       KRILL - The coa Universal Installer          \033[0m")
 	fmt.Println("\033[1;36m====================================================\033[0m")
@@ -106,10 +107,10 @@ func HandleKrill() {
 		return
 	}
 
-	generateInstallPlan(answers, targetClean)
+	generateInstallPlan(answers, targetClean, d)
 }
 
-func generateInstallPlan(ans *KrillAnswers, disk string) {
+func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 	fmt.Println("\n\033[1;34m[krill]\033[0m Compiling JSON flight plan for the C engine...")
 
 	squashPath := getSquashfsPath()
@@ -120,79 +121,87 @@ func generateInstallPlan(ans *KrillAnswers, disk string) {
 
 	hashedPass := generateHashedPassword(ans.Password)
 
-	// Inizializzazione del Piano di Volo
+	// 1. Inizializzazione del Piano di Volo
 	plan := engine.FlightPlan{
 		PathLiveFs: "/mnt/krill-target", // Area di mount per l'installazione
 		Mode:       "install",
 		Plan:       []engine.Action{},
 	}
 
-	// 1. DISCO E PARTIZIONAMENTO
-	plan.Plan = append(plan.Plan, engine.Action{
-		Command:    "oa_install_partition",
-		RunCommand: disk,
-	})
+	// 2. PREPARAZIONE DISCO E FILESYSTEM
+	plan.Plan = append(plan.Plan,
+		engine.Action{Command: "oa_install_partition", RunCommand: disk},                          //
+		engine.Action{Command: "oa_install_format", RunCommand: disk},                             //
+		engine.Action{Command: "oa_install_unpack", RunCommand: disk, Args: []string{squashPath}}, //
+		// Prepariamo l'ambiente chroot sul disco fisico
+		engine.Action{Command: "oa_install_prepare", RunCommand: disk},
+	)
 
-	if ans.UseLuks {
-		plan.Plan = append(plan.Plan, engine.Action{
-			Command:         "oa_install_format_luks",
-			RunCommand:      disk,
-			CryptedPassword: ans.Password,
-		})
-	} else {
-		plan.Plan = append(plan.Plan, engine.Action{
-			Command:    "oa_install_format",
-			RunCommand: disk,
-		})
+	// 3. LOGICA DISTRO-SPECIFICA (The Mind) [cite: 3, 79]
+	var shellInitrdCmd string
+	var shellGrubCmd string
+
+	// Determiniamo i comandi in base alla famiglia della distribuzione
+	switch d.FamilyID {
+	case "archlinux":
+		shellInitrdCmd = "mkinitcpio -P"
+		if isUEFI() {
+			shellGrubCmd = "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=coa --recheck && grub-mkconfig -o /boot/grub/grub.cfg"
+		} else {
+			shellGrubCmd = "grub-install --target=i386-pc --recheck " + disk + " && grub-mkconfig -o /boot/grub/grub.cfg"
+		}
+	case "fedora", "rhel", "centos", "rocky", "almalinux":
+		shellInitrdCmd = "dracut --force --regenerate-all"
+		shellGrubCmd = "grub2-mkconfig -o /boot/grub2/grub.cfg"
+	default: // Debian/Ubuntu
+		shellInitrdCmd = "update-initramfs -u -k all"
+		if isUEFI() {
+			shellGrubCmd = "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=coa --recheck && update-grub"
+		} else {
+			shellGrubCmd = "grub-install --target=i386-pc --recheck " + disk + " && update-grub"
+		}
 	}
 
-	// 2. UNPACK (Scompatta l'immagine e monta le API FS nel target)
-	plan.Plan = append(plan.Plan, engine.Action{
-		Command:    "oa_install_unpack",
-		RunCommand: disk,
-		Args:       []string{squashPath},
-	})
-
-	// 3. CONFIGURAZIONE CHROOT (Usando il nuovo oa_sys_shell universale)
+	// 4. ESECUZIONE AZIONI UNIVERSALI E CHROOT
 	plan.Plan = append(plan.Plan,
-		engine.Action{Command: "oa_install_fstab", RunCommand: disk},
+		engine.Action{Command: "oa_install_fstab", RunCommand: disk}, // [cite: 95]
 
-		// Generazione Machine-ID univoco (Essenziale per systemd e networking)
+		// Configurazione Hostname e Machine-ID via Shell [cite: 95, 96]
 		engine.Action{
 			Command:    "oa_sys_shell",
-			RunCommand: "rm -f /etc/machine-id /var/lib/dbus/machine-id && systemd-machine-id-setup || touch /etc/machine-id",
+			RunCommand: fmt.Sprintf("echo %s > /etc/hostname && systemd-machine-id-setup", ans.Hostname),
 			Chroot:     true,
 		},
 
-		// Setup Hostname e aggiornamento /etc/hosts (per evitare lag di sudo)
+		// Generazione Initrd via Shell
 		engine.Action{
-			Command: "oa_sys_shell",
-			RunCommand: fmt.Sprintf(
-				"echo %s > /etc/hostname && sed -i 's/127.0.1.1.*/127.0.1.1\t%s/' /etc/hosts",
-				ans.Hostname, ans.Hostname,
-			),
-			Chroot: true,
+			Command:    "oa_sys_shell",
+			RunCommand: shellInitrdCmd,
+			Chroot:     true,
 		},
 
-		// Pulizia file residui della sessione Live
+		// Installazione Bootloader via Shell
+		engine.Action{
+			Command:    "oa_sys_shell",
+			RunCommand: shellGrubCmd,
+			Chroot:     true,
+		},
+
+		// Iniezione identità utenti (Manteniamo l'azione nativa per sicurezza) [cite: 95, 97]
+		engine.Action{Command: "oa_install_users"},
+
+		// Pulizia residui sessione live
 		engine.Action{
 			Command:    "oa_sys_shell",
 			RunCommand: "rm -rf /var/log/installer /var/lib/live/config /etc/sudoers.d/live-user 2>/dev/null",
 			Chroot:     true,
 		},
 
-		engine.Action{Command: "oa_install_users"},
-		engine.Action{Command: "oa_install_initrd"},
+		// Unmount e pulizia finale
+		engine.Action{Command: "oa_install_cleanup"},
 	)
 
-	// 4. BOOTLOADER (UEFI vs BIOS)
-	if isUEFI() {
-		plan.Plan = append(plan.Plan, engine.Action{Command: "oa_install_uefi", RunCommand: disk})
-	} else {
-		plan.Plan = append(plan.Plan, engine.Action{Command: "oa_install_bios", RunCommand: disk})
-	}
-
-	// Configurazione Utente primario
+	// 5. Configurazione Utente Primario [cite: 97]
 	plan.Users = []engine.UserConfig{
 		{
 			Login:    ans.Username,
@@ -204,19 +213,18 @@ func generateInstallPlan(ans *KrillAnswers, disk string) {
 		},
 	}
 
-	// Salvataggio ed Esecuzione
+	// 6. Salvataggio ed Esecuzione
 	jsonData, _ := json.MarshalIndent(plan, "", "  ")
 	outPath := "/tmp/sysinstall.json"
 	os.WriteFile(outPath, jsonData, 0644)
 
 	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Flight plan ready at %s\n", outPath)
-	
-	// Esecuzione tramite l'engine centrale
+
+	// Esecuzione tramite l'engine centrale (oa) [cite: 86]
 	engine.ExecutePlan(plan)
 }
 
 // --- HELPER DI SISTEMA ---
-
 func isUEFI() bool {
 	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
 		return true
@@ -229,7 +237,7 @@ func getSquashfsPath() string {
 		"/run/live/medium/live/filesystem.squashfs",       // Debian Live
 		"/lib/live/mount/medium/live/filesystem.squashfs", // Debian Alt
 		"/run/archiso/bootmnt/arch/x86_64/airootfs.sfs",   // Arch
-		"/run/initramfs/live/live/filesystem.squashfs",    // Fedora 
+		"/run/initramfs/live/live/filesystem.squashfs",    // Fedora
 		"/home/eggs/iso/live/filesystem.squashfs",         // Local coa/oa
 	}
 
@@ -267,12 +275,16 @@ func getAvailableDisks() []string {
 			disks = append(disks, diskStr)
 		}
 	}
-	if len(disks) == 0 { disks = append(disks, "NO_SAFE_DISKS_FOUND") }
+	if len(disks) == 0 {
+		disks = append(disks, "NO_SAFE_DISKS_FOUND")
+	}
 	return disks
 }
 
 func generateHashedPassword(plain string) string {
 	out, err := exec.Command("openssl", "passwd", "-6", plain).Output()
-	if err != nil { return plain }
+	if err != nil {
+		return plain
+	}
 	return strings.TrimSpace(string(out))
 }

@@ -67,6 +67,7 @@ typedef struct {
 #include "install_initrd.h"
 #include "install_uefi.h"
 #include "install_bios.h"
+#include "install_prepare.h"
 
 // SYS (Utility Generiche)
 #include "sys_run.h"

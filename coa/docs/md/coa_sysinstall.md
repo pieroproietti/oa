@@ -6,7 +6,8 @@ Install the live system to a physical disk
 
 The 'sysinstall' command is the interactive system installer.
 It gathers user preferences via TUI and orchestrates the physical installation 
-on the target disk. WARNING: This operation is destructive.
+on the target disk.
+WARNING: This operation is destructive.
 
 ```
 coa sysinstall [flags]
