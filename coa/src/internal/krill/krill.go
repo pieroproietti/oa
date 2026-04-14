@@ -153,15 +153,17 @@ func generateInstallPlan(ans *KrillAnswers, disk string) {
 			Args:       []string{squashPath},
 		},
 		engine.Action{Command: "oa_install_fstab", RunCommand: disk},
+		// RESET MACHINE-ID: Uso di oa_sys_shell in chroot
 		engine.Action{
-			Command:    "oa_sys_run",
-			RunCommand: "sh",
-			Args:       []string{"-c", "rm -f /etc/machine-id && touch /etc/machine-id"},
+			Command:    "oa_sys_shell",
+			RunCommand: "rm -f /etc/machine-id && touch /etc/machine-id",
+			Chroot:     true,
 		},
+		// SETUP HOSTNAME: Uso di oa_sys_shell in chroot
 		engine.Action{
-			Command:    "oa_sys_run",
-			RunCommand: "sh",
-			Args:       []string{"-c", "echo " + ans.Hostname + " > /etc/hostname"},
+			Command:    "oa_sys_shell",
+			RunCommand: "echo " + ans.Hostname + " > /etc/hostname",
+			Chroot:     true,
 		},
 		engine.Action{Command: "oa_install_users"},
 		engine.Action{Command: "oa_install_initrd"},
@@ -199,7 +201,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string) {
 	}
 
 	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Flight plan compiled and saved to \033[1m%s\033[0m\n", outPath)
-	fmt.Println("\033[1;33m[krill]\033[0m To execute physical installation: \033[1msudo oa /tmp/plan-install.json\033[0m")
+	fmt.Println("\033[1;33m[krill]\033[0m To execute physical installation: \033[1msudo oa /tmp/sysinstall.json\033[0m")
 
 	// Chiamata all'engine centrale
 	engine.ExecutePlan(plan)

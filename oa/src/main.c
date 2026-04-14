@@ -62,6 +62,7 @@ int execute_verb(cJSON *root, cJSON *task) {
     else if (strcmp(cmd_name, "oa_install_bios") == 0)         status = install_bios(&ctx);
 
     // --- FASE 3: SYS (Utility) ---
+    else if (strcmp(cmd_name, "oa_sys_shell") == 0)            status = sys_shell(&ctx); 
     else if (strcmp(cmd_name, "oa_sys_run") == 0)              status = sys_run(&ctx);
     else if (strcmp(cmd_name, "oa_sys_scan") == 0)             status = sys_scan(&ctx);
     else if (strcmp(cmd_name, "oa_sys_suspend") == 0)          status = sys_suspend(&ctx);

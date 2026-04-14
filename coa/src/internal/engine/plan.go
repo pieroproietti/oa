@@ -25,6 +25,7 @@ type Action struct {
 	OutputISO       string   `json:"output_iso,omitempty"`
 	CryptedPassword string   `json:"crypted_password,omitempty"`
 	RunCommand      string   `json:"run_command,omitempty"`
+	Chroot          bool     `json:"chroot,omitempty"` // Supporto per esecuzione in liveroot
 	ExcludeList     string   `json:"exclude_list,omitempty"`
 	BootParams      string   `json:"boot_params,omitempty"` // Parametri dinamici per il bootloader
 	Args            []string `json:"args,omitempty"`
@@ -105,17 +106,6 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 		bootParams = "root=live:CDLABEL=OA_LIVE rd.live.image rd.live.dir=live rd.live.squashimg=filesystem.squashfs selinux=0"
 	}
 
-	switch d.FamilyID {
-	case "debian":
-		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
-	case "archlinux":
-		plan.InitrdCmd = "mkinitcpio -c /etc/coa_mkinitcpio.conf -g {{out}} -k {{ver}}"
-	case "fedora", "rhel", "centos", "rocky", "almalinux":
-		plan.InitrdCmd = "dracut --no-hostonly --nomdadmconf --nolvmconf --xz --add dmsquash-live --add rootfs-block --add bash --add-drivers \"overlay squashfs loop iso9660 cdrom sr_mod\" --force {{out}} {{ver}}"
-	default:
-		plan.InitrdCmd = "mkinitramfs -o {{out}} {{ver}}"
-	}
-
 	if mode == "standard" {
 		adminGroup := "sudo"
 		if d.FamilyID == "archlinux" || d.FamilyID == "fedora" || d.FamilyID == "rhel" || d.FamilyID == "centos" || d.FamilyID == "rocky" || d.FamilyID == "almalinux" {
@@ -137,15 +127,13 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 			{Command: "oa_remaster_users"},
 		}
 
-		sudoersDir := "/etc/sudoers.d"
-		sudoersFile := "/etc/sudoers.d/00-oa-live"
-		sudoersContent := fmt.Sprintf("%%%s ALL=(ALL) NOPASSWD: ALL", adminGroup)
-		sudoersCmd := fmt.Sprintf("mkdir -p %s && echo '%s' > %s && chmod 0440 %s", sudoersDir, sudoersContent, sudoersFile, sudoersFile)
+		// Comando pulito: OA gestisce il chroot nativamente
+		sudoersCmd := fmt.Sprintf("mkdir -p /etc/sudoers.d && echo '%%%s ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/00-oa-live && chmod 0440 /etc/sudoers.d/00-oa-live", adminGroup)
 
 		plan.Plan = append(plan.Plan, Action{
-			Command:    "oa_sys_run",
-			RunCommand: "sh",
-			Args:       []string{"-c", sudoersCmd},
+			Command:    "oa_sys_shell",
+			RunCommand: sudoersCmd,
+			Chroot:     true,
 		})
 
 	} else {
@@ -156,28 +144,48 @@ func GeneratePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	}
 
 	if d.FamilyID == "fedora" || d.FamilyID == "rhel" || d.FamilyID == "centos" || d.FamilyID == "rocky" || d.FamilyID == "almalinux" {
-		targetConfDir := fmt.Sprintf("%s/liveroot/etc/dracut.conf.d", workPath)
+		targetConfDir := "/etc/dracut.conf.d"
 		targetConfPath := fmt.Sprintf("%s/coa.conf", targetConfDir)
-		dracutConfig := `hostonly="no"\nadd_dracutmodules+=" dmsquash-live rootfs-block bash "\ncompress="xz"`
-		writeCmd := fmt.Sprintf(`echo -e '%s' > %s`, dracutConfig, targetConfPath)
+		dracutConfig := "hostonly=\"no\"\nadd_dracutmodules+=\" dmsquash-live rootfs-block bash \"\ncompress=\"xz\""
+
+		writeCmd := fmt.Sprintf("mkdir -p %s && echo -e '%s' > %s", targetConfDir, dracutConfig, targetConfPath)
 
 		plan.Plan = append(plan.Plan, Action{
-			Command:    "oa_sys_run",
-			RunCommand: "mkdir",
-			Args:       []string{"-p", targetConfDir},
+			Command:    "oa_sys_shell",
+			RunCommand: writeCmd,
+			Chroot:     true,
 		})
+	}
 
-		plan.Plan = append(plan.Plan, Action{
-			Command:    "oa_sys_run",
-			RunCommand: "sh",
-			Args:       []string{"-c", writeCmd},
-		})
+	// Grazie al chroot nativo in OA, le variabili vengono risolte correttamente nel guest
+	// Comando specifico per la rigenerazione dell'initrd via shell.
+	// Ora che /boot è una copia fisica e /tmp è un tmpfs (gestiti da oa),
+	// il comando torna a essere pulito e lineare.
+	var shellInitrdCmd string
+	switch d.FamilyID {
+	case "archlinux":
+		// Grazie alla copia fisica in C, /boot è ora una directory reale e scrivibile.
+		// Ci limitiamo a garantire i permessi corretti per sicurezza.
+		shellInitrdCmd = "chmod 755 /boot && " +
+			"KVER=$(ls /lib/modules | head -n 1) && " +
+			"mkinitcpio -c /etc/coa_mkinitcpio.conf -k $KVER -g /boot/initrd.img"
+
+	case "fedora", "rhel", "centos", "rocky", "almalinux":
+		shellInitrdCmd = "dracut --force --regenerate-all"
+
+	default: // Debian/Ubuntu
+		// update-initramfs gestisce correttamente i vari kernel installati
+		shellInitrdCmd = "update-initramfs -u -k all || update-initramfs -c -k all"
 	}
 
 	excludeFilePath := generateExcludeList(mode)
 
 	plan.Plan = append(plan.Plan,
-		Action{Command: "oa_remaster_initrd"},
+		Action{
+			Command:    "oa_sys_shell",
+			RunCommand: shellInitrdCmd,
+			Chroot:     true,
+		},
 		Action{Command: "oa_remaster_livestruct"},
 		Action{Command: "oa_remaster_isolinux", BootParams: bootParams},
 		Action{Command: "oa_remaster_uefi", BootParams: bootParams},

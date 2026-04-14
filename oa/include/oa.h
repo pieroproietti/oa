@@ -70,6 +70,7 @@ typedef struct {
 
 // SYS (Utility Generiche)
 #include "sys_run.h"
+#include "sys_shell.h"
 #include "sys_scan.h"
 #include "sys_suspend.h"
 
