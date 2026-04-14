@@ -210,7 +210,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string) {
 	os.WriteFile(outPath, jsonData, 0644)
 
 	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Flight plan ready at %s\n", outPath)
-
+	
 	// Esecuzione tramite l'engine centrale
 	engine.ExecutePlan(plan)
 }
@@ -229,8 +229,10 @@ func getSquashfsPath() string {
 		"/run/live/medium/live/filesystem.squashfs",       // Debian Live
 		"/lib/live/mount/medium/live/filesystem.squashfs", // Debian Alt
 		"/run/archiso/bootmnt/arch/x86_64/airootfs.sfs",   // Arch
+		"/run/initramfs/live/live/filesystem.squashfs",    // Fedora 
 		"/home/eggs/iso/live/filesystem.squashfs",         // Local coa/oa
 	}
+
 	for _, p := range paths {
 		if _, err := os.Stat(p); err == nil {
 			return p
@@ -265,16 +267,12 @@ func getAvailableDisks() []string {
 			disks = append(disks, diskStr)
 		}
 	}
-	if len(disks) == 0 {
-		disks = append(disks, "NO_SAFE_DISKS_FOUND")
-	}
+	if len(disks) == 0 { disks = append(disks, "NO_SAFE_DISKS_FOUND") }
 	return disks
 }
 
 func generateHashedPassword(plain string) string {
 	out, err := exec.Command("openssl", "passwd", "-6", plain).Output()
-	if err != nil {
-		return plain
-	}
+	if err != nil { return plain }
 	return strings.TrimSpace(string(out))
 }
