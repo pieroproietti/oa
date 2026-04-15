@@ -132,7 +132,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 
 	// 7. Salvataggio ed Esecuzione
 	jsonData, _ := json.MarshalIndent(plan, "", "  ")
-	outPath := "/tmp/oa-sysinstall.json"
+	outPath := "/tmp/oa-plan.json"
 	os.WriteFile(outPath, jsonData, 0644)
 
 	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Flight plan ready at %s\n", outPath)
