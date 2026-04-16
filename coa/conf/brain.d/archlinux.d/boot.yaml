@@ -1,0 +1,7 @@
+# [ coa brain unit ]
+# family: archlinux
+# area:   boot
+# --------------------------------------------------
+boot:
+  params: "archisobasedir=arch archisolabel=OA_LIVE cow_spacesize=10G"
+  

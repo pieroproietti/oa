@@ -1,0 +1,16 @@
+# [ coa brain unit ]
+# family: archlinux
+# area:   initrd
+# --------------------------------------------------
+initrd:
+  live:
+    # Genera l'initramfs con il nome che oa si aspetta di trovare nella ISO
+    command: "KVER=$(ls /lib/modules | head -n 1) && mkinitcpio -c /etc/coa-mkinitcpio.conf -k $KVER -g /boot/initramfs-linux.img"
+    setup_files:
+      "/etc/coa-mkinitcpio.conf": |
+        MODULES=(loop overlay squashfs)
+        BINARIES=()
+        FILES=()
+        # Questi hook trasformano un sistema fisso in una Live USB/ISO
+        HOOKS=(base udev microcode modconf kms memdisk archiso archiso_loop_mnt archiso_pxe_common archiso_pxe_nbd archiso_pxe_http archiso_pxe_nfs block filesystems keyboard keymap consolefont fsck)
+        COMPRESSION="xz"

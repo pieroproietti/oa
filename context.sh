@@ -64,13 +64,13 @@ FILES_OA=(
 
 # FILES_COA: La mente in Go (Nuova Struttura)
 FILES_COA=(
-    coa/m 
     coa/go.mod 
     coa/README.md
+    coa/conf/**/*
     coa/src/main.go
     coa/src/cmd/*.go
     coa/src/internal/**/*.go
-    coa/src/internal/assets/assets/**/*
+    # coa/src/internal/assets/assets/**/*
     coa/src/middleware/**/*.go
     coa/conf/*.yaml 
 )

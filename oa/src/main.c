@@ -27,6 +27,8 @@ char *read_file(const char *filename) {
 /* oa/src/main.c */
 int execute_verb(cJSON *root, cJSON *task) {
     cJSON *command = cJSON_GetObjectItemCaseSensitive(task, "command");
+    cJSON *info = cJSON_GetObjectItemCaseSensitive(task, "info");
+
     if (!cJSON_IsString(command) || (command->valuestring == NULL)) {
         LOG_ERR("Task without a valid 'command' field found.");
         return 1;
@@ -34,30 +36,32 @@ int execute_verb(cJSON *root, cJSON *task) {
 
     const char *cmd_name = command->valuestring;
     OA_Context ctx = { .root = root, .task = task };
+    
+if (cJSON_IsString(info) && info->valuestring != NULL) {
+        // Se coa ha inviato una descrizione "umana", usala
+        printf("[oa] %s\n", info->valuestring);
+    }
 
     LOG_INFO(">>> dispatching to: %s", cmd_name);
-    printf("\033[1;34m[oa]\033[0m Executing action '%s'...\n", cmd_name);
     int status = 1;
 
     // --- FASE 1: REMASTER (Ex LAY) ---
     if (strcmp(cmd_name, "oa_remaster_prepare") == 0)          status = remaster_prepare(&ctx);
-    else if (strcmp(cmd_name, "oa_remaster_cleanup") == 0)     status = remaster_cleanup(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_crypted") == 0)     status = remaster_crypted(&ctx);
-    else if (strcmp(cmd_name, "oa_remaster_initrd") == 0)      status = remaster_initrd(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_iso") == 0)         status = remaster_iso(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_isolinux") == 0)    status = remaster_isolinux(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_livestruct") == 0)  status = remaster_livestruct(&ctx);
-    else if (strcmp(cmd_name, "oa_remaster_squash") == 0)      status = remaster_squash(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_uefi") == 0)        status = remaster_uefi(&ctx);
     else if (strcmp(cmd_name, "oa_remaster_users") == 0)       status = remaster_users(&ctx);
+    else if (strcmp(cmd_name, "oa_remaster_squash") == 0)      status = remaster_squash(&ctx);
+    else if (strcmp(cmd_name, "oa_remaster_cleanup") == 0)     status = remaster_cleanup(&ctx);
 
     // --- FASE 2: INSTALL (Ex HATCH) ---
+    else if (strcmp(cmd_name, "oa_install_prepare") == 0)      status = install_prepare(&ctx);
     else if (strcmp(cmd_name, "oa_install_partition") == 0)    status = install_partition(&ctx);
     else if (strcmp(cmd_name, "oa_install_format") == 0)       status = install_format(&ctx);
     else if (strcmp(cmd_name, "oa_install_unpack") == 0)       status = install_unpack(&ctx);
-    else if (strcmp(cmd_name, "oa_install_prepare") == 0)      status = install_prepare(&ctx);
     else if (strcmp(cmd_name, "oa_install_fstab") == 0)        status = install_fstab(&ctx);
-    else if (strcmp(cmd_name, "oa_install_initrd") == 0)       status = install_initrd(&ctx);
     else if (strcmp(cmd_name, "oa_install_users") == 0)        status = install_users(&ctx);
     else if (strcmp(cmd_name, "oa_install_uefi") == 0)         status = install_uefi(&ctx);
     else if (strcmp(cmd_name, "oa_install_bios") == 0)         status = install_bios(&ctx);
@@ -66,7 +70,6 @@ int execute_verb(cJSON *root, cJSON *task) {
 
     // --- FASE 3: SYS (Utility) ---
     else if (strcmp(cmd_name, "oa_sys_shell") == 0)            status = sys_shell(&ctx); 
-    else if (strcmp(cmd_name, "oa_sys_run") == 0)              status = sys_run(&ctx);
     else if (strcmp(cmd_name, "oa_sys_scan") == 0)             status = sys_scan(&ctx);
     else if (strcmp(cmd_name, "oa_sys_suspend") == 0)          status = sys_suspend(&ctx);
 
@@ -85,7 +88,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Inizializziamo il logger subito (es. oa.log per chiarezza)
-    oa_init_log("oa.log");
+    oa_init_log("/var/log/oa-tools.log");
     LOG_INFO("=== STARTING OA ENGINE ===");
     LOG_INFO("Input plan: %s", argv[1]);
 

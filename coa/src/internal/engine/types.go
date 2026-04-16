@@ -6,6 +6,7 @@ const BootloaderRoot = "/tmp/coa/bootloaders"
 // Action rappresenta un singolo blocco "command" nell'array "plan" [cite: 89]
 type Action struct {
 	Command         string   `json:"command"`
+	Info            string   `json:"info,omitempty"` // <-- Aggiunto per l'output a video
 	VolID           string   `json:"volid,omitempty"`
 	OutputISO       string   `json:"output_iso,omitempty"`
 	CryptedPassword string   `json:"crypted_password,omitempty"`

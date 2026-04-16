@@ -9,9 +9,10 @@ int sys_shell(OA_Context *ctx) {
     cJSON *cmd_obj = cJSON_GetObjectItemCaseSensitive(ctx->task, "run_command");
     cJSON *chroot_obj = cJSON_GetObjectItemCaseSensitive(ctx->task, "chroot");
     cJSON *path_obj = cJSON_GetObjectItemCaseSensitive(ctx->root, "pathLiveFs");
+    cJSON *info_obj = cJSON_GetObjectItemCaseSensitive(ctx->task, "info"); // <-- Nuovo campo
 
     if (!cJSON_IsString(cmd_obj)) {
-        LOG_ERR("oa_shell: 'run_command' mancante o non valido.");
+        LOG_ERR("oa_shell: 'run_command' mancante.");
         return 1;
     }
 

@@ -62,12 +62,12 @@ func ExecutePlan(plan FlightPlan) {
 		log.Fatalf("\033[1;31m[coa]\033[0m JSON Error: %v", err)
 	}
 
-	tmpJsonPath := "/tmp/remaster.json"
+	tmpJsonPath := "oa-plan.json"
 	err = os.WriteFile(tmpJsonPath, jsonData, 0644)
 	if err != nil {
 		log.Fatalf("\033[1;31m[coa]\033[0m Temp file error: %v", err)
 	}
-	defer os.Remove(tmpJsonPath)
+	// defer os.Remove(tmpJsonPath)
 
 	oaPath := getOaPath()
 	cmd := exec.Command("sudo", oaPath, tmpJsonPath)

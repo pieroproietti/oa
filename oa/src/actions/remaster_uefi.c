@@ -98,7 +98,8 @@ int remaster_uefi(OA_Context *ctx) {
     FILE *f_efi = fopen(efi_cfg_path, "w");
     if (f_efi) {
         fprintf(f_efi, 
-            "search --no-floppy --set=root --file /boot/grub/grub.cfg\n"
+            "search --no-floppy --set=root --label OA_LIVE\n"
+            // "search --no-floppy --set=root --file /boot/grub/grub.cfg\n"
             "set prefix=($root)/boot/grub\n"
             "configfile /boot/grub/grub.cfg\n"
         );

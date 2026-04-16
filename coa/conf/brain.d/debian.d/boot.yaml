@@ -1,0 +1,7 @@
+# [ coa brain unit ]
+# family: debian
+# area:   boot
+# --------------------------------------------------
+boot:
+  params: "boot=live components quiet splash"
+  
