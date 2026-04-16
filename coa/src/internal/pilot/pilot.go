@@ -197,14 +197,9 @@ func GenerateBootConfig(familyID string, task *InitrdTask) error {
 	label := "OA_LIVE" // Potrebbe essere dinamico in futuro
 	params := task.Remaster.BootParams
 
-	// Definiamo i percorsi del kernel/initrd (possono essere spostati nel brain.d se variano ancora)
+	// Definiamo i percorsi del kernel/initrd
 	kernelPath := "/live/vmlinuz"
 	initrdPath := "/live/initrd.img"
-
-	if familyID == "archlinux" {
-		kernelPath = "/boot/vmlinuz-linux-lts"
-		initrdPath = "/boot/initramfs-linux.img"
-	}
 
 	// Template GRUB
 	content := fmt.Sprintf(`search --no-floppy --set=root --label %s
