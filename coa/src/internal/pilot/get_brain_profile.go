@@ -84,26 +84,24 @@ func createIdentityTask(d *distro.Distro, mode string) (*Task, error) {
 func createInitrdTask(d *distro.Distro) (*Task, error) {
 	var cfg InitrdConfig
 
-	// Usiamo la funzione di lettura che abbiamo definito in pilot.go
+	// Carica il file (es. debian/initrd.yaml)
 	if err := readAreaConfig(d.FamilyID, "initrd", &cfg); err != nil {
 		return nil, err
 	}
 
-	// Trasformiamo la configurazione dello YAML nel nostro Task universale
 	task := &Task{
 		Name:        "initrd",
 		Description: fmt.Sprintf("Regenerating initramfs for %s", d.FamilyID),
 		Files:       make(map[string]string),
 		Commands:    []string{},
-		Chroot:      true, // Fondamentale: l'initrd si rigenera SEMPRE in chroot
+		Chroot:      true,
 	}
 
-	// 1. Aggiungiamo i file di configurazione (es. coa-mkinitcpio.conf)
+	// Ora carichiamo i dati direttamente (niente più .Initrd.Live o wrapper)
 	for path, content := range cfg.Files {
 		task.Files[path] = content
 	}
 
-	// 2. Aggiungiamo il comando di rigenerazione
 	if cfg.Command != "" {
 		task.Commands = append(task.Commands, cfg.Command)
 	}

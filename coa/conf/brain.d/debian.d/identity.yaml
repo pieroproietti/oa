@@ -2,6 +2,5 @@
 # family: debian
 # area:   identity
 # --------------------------------------------------
-identity:
-  admin_group: "sudo"
-  user_groups: ["cdrom", "audio", "video", "plugdev", "netdev", "autologin"]
+admin_group: "sudo"
+user_groups: ["cdrom", "audio", "video", "plugdev", "netdev", "autologin"]

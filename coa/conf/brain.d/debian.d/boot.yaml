@@ -2,6 +2,5 @@
 # family: debian
 # area:   boot
 # --------------------------------------------------
-boot:
-  params: "boot=live components quiet splash"
+params: "boot=live components quiet splash"
   

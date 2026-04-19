@@ -1,20 +1,19 @@
 package pilot
 
-// Task rappresenta un'unità di lavoro atomica.
+// Task rappresenta l'unità di lavoro che finirà nel piano di remaster
 type Task struct {
-	Name        string
-	Files       map[string]string
-	Commands    []string
-	Chroot      bool
-	Description string
+	Name        string            `json:"Name"`
+	Files       map[string]string `json:"Files"`
+	Commands    []string          `json:"Commands"`
+	Chroot      bool              `json:"Chroot"`
+	Description string            `json:"Description"`
 }
 
-// BrainProfile è il contenitore dei compiti.
 type BrainProfile struct {
 	Tasks []Task
 }
 
-// --- AGGIUNGI QUESTE STRUTTURE ---
+// Strutture di configurazione (mappano i file YAML piatti)
 
 type IdentityConfig struct {
 	AdminGroup string   `yaml:"admin_group"`
@@ -23,14 +22,13 @@ type IdentityConfig struct {
 
 type InitrdConfig struct {
 	Command string            `yaml:"command"`
-	Files   map[string]string `yaml:"setup_files"`
+	Files   map[string]string `yaml:"setup_files"` // Usa setup_files per tutti
 }
 
 type BootConfig struct {
 	Params string `yaml:"params"`
 }
 
-// links sull'iso per arch
 type LayoutConfig struct {
-	Links map[string]string `yaml:"links"` // "destinazione" -> "sorgente"
+	Links map[string]string `yaml:"links"`
 }

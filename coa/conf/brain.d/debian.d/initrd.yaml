@@ -2,5 +2,4 @@
 # family: debian
 # area:   initrd
 # --------------------------------------------------
-initrd:
-  live: "update-initramfs -u -k all || update-initramfs -c -k all"
+command: "update-initramfs -u -k all || update-initramfs -c -k all"

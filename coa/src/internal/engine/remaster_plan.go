@@ -1,8 +1,6 @@
 package engine
 
 import (
-	"encoding/json"
-
 	"coa/src/internal/distro"
 	"coa/src/internal/pilot"
 	"fmt"
@@ -11,11 +9,10 @@ import (
 func generatePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	// 1. Il Cervello fornisce il nuovo Profilo Modulare
 	profile := pilot.GetBrainProfile(d, mode, workPath)
-	b, berr := json.MarshalIndent(profile, "", "  ")
-	if berr != nil {
-		fmt.Println("Errore nella visualizzazione:", berr)
+	// Debug rapido per contare i pezzi
+	for _, t := range profile.Tasks {
+		fmt.Printf("DEBUG: Task '%s' caricato con %d comandi\n", t.Name, len(t.Commands))
 	}
-	fmt.Println(string(b))
 
 	// Fallback temporanei per le parti non ancora migrate (Identity/Boot)
 	bootParams := "boot=live components"
