@@ -25,6 +25,21 @@ func generatePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
 	}
 
 	for _, t := range profile.Tasks {
+		// 1. Simuliamo la creazione dei file tramite shell redirection
+		for path, content := range t.Files {
+			// Usiamo cat <<'EOF' per gestire i ritorni a capo e i caratteri speciali
+			// Il single quote 'EOF' impedisce alla shell di interpretare variabili nel contenuto
+			fileCommand := fmt.Sprintf("cat <<'EOF' > %s\n%s\nEOF", path, content)
+
+			plan.Plan = append(plan.Plan, Action{
+				Command:    "oa_sys_shell",
+				Info:       "Writing config: " + path,
+				RunCommand: fileCommand,
+				Chroot:     t.Chroot,
+			})
+		}
+
+		// 2. Eseguiamo i comandi (ora troveranno i file pronti!)
 		for _, cmd := range t.Commands {
 			plan.Plan = append(plan.Plan, Action{
 				Command:    "oa_sys_shell",
