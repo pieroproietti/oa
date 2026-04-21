@@ -3,7 +3,6 @@ package pilot
 import (
 	"coa/src/internal/distro"
 	"fmt"
-	"strings"
 )
 
 func GetBrainProfile(d *distro.Distro, mode string, workPath string) *BrainProfile {
@@ -37,7 +36,6 @@ func GetBrainProfile(d *distro.Distro, mode string, workPath string) *BrainProfi
 	return profile
 }
 
-// createIdentityTask
 func createIdentityTask(d *distro.Distro, mode string) (*Task, error) {
 	var cfg IdentityConfig
 	if err := readAreaConfig(d.FamilyID, "identity", &cfg); err != nil {
@@ -46,47 +44,38 @@ func createIdentityTask(d *distro.Distro, mode string) (*Task, error) {
 
 	task := &Task{
 		Name:        "identity",
-		Description: "User & Group Identity artisan",
-		Chroot:      true,
+		Description: "Artisan identity injection (passwd/shadow)",
+		Files:       make(map[string]string),
 		Commands:    []string{},
+		Chroot:      true,
 	}
 
-	// 1. CASO CLONE: Non facciamo nulla, preserviamo gli utenti dell'host
-	if mode == "clone" {
-		task.Description += " (Preserving host identities - Clone Mode)"
-		return task, nil
-	}
-
-	// 2. CASO STANDARD o CRYPTED: Modifichiamo utenti e gruppi
-	if mode == "standard" || mode == "crypted" {
-		login := "live" // Nome dell'utente live di default
-
-		// A. PULIZIA (Purge)
-		// Rimuoviamo gli utenti umani esistenti (UID 1000-59999)
+	// 1. PULIZIA (Purge): Se non siamo in clone, puliamo gli utenti dell'host
+	if mode != "clone" && mode != "crypted" {
 		purgeCmd := "awk -F: '$3 < 1000 || $3 > 59999' /etc/passwd > /tmp/p && mv /tmp/p /etc/passwd && " +
 			"awk -F: '$3 < 1000 || $3 > 59999' /etc/group > /tmp/g && mv /tmp/g /etc/group"
 		task.Commands = append(task.Commands, purgeCmd)
-
-		// B. INIEZIONE NUOVA IDENTITÀ (Passwd & Shadow)
-		// Usiamo i tuoi comandi echo o useradd
-		task.Commands = append(task.Commands, fmt.Sprintf("echo '%s:x:1000:1000:%s,,,:/home/%s:/bin/bash' >> /etc/passwd", login, login, login))
-		// Inseriamo l'hash della password (recuperato dal brain o default)
-		task.Commands = append(task.Commands, fmt.Sprintf("echo '%s:$6$hash_di_esempio...:19000:0:99999:7:::' >> /etc/shadow", login))
-
-		// C. MAPPATURA GRUPPI (La logica "Artisan" universale che abbiamo discusso)
-		groupMapping := getGroupMappingCommand(login, cfg.AdminGroup, cfg.UserGroups)
-		task.Commands = append(task.Commands, groupMapping)
-
-		// D. ABILITAZIONE SUDOERS
-		sudoCmd := fmt.Sprintf("sed -i 's/^# %%%s ALL=(ALL:ALL) ALL/%%%s ALL=(ALL:ALL) ALL/' /etc/sudoers",
-			cfg.AdminGroup, cfg.AdminGroup)
-		task.Commands = append(task.Commands, sudoCmd)
-
-		// E. SETUP HOME (Skel & Permissions)
-		homeCmd := fmt.Sprintf("mkdir -p /home/%s && cp -a /etc/skel/. /home/%s/ 2>/dev/null || true && chown -R 1000:1000 /home/%s",
-			login, login, login)
-		task.Commands = append(task.Commands, homeCmd)
 	}
+
+	// 2. INIEZIONE: Creiamo l'utente live (esempio semplificato per un utente)
+	// In futuro potrai iterare su una lista di utenti dal profilo
+	login := "live"
+	uid, gid := 1000, 1000
+	gecos := "live,,,"
+	home := "/home/live"
+	shell := "/bin/bash"
+	passwordHash := "$6$wM.wY0QtatvbQMHZ$QtIKXSpIsp2Sk57.Ny.JHk7hWDu.lxPtUYaTOiBnP4WBG5KS6JpUlpXj2kcSaaMje7fr01uiGmxZhE8kfZRqv."
+
+	passwdLine := fmt.Sprintf("%s:x:%d:%d:%s:%s:%s", login, uid, gid, gecos, home, shell)
+	shadowLine := fmt.Sprintf("%s:%s:19000:0:99999:7:::", login, passwordHash)
+
+	injectCmd := fmt.Sprintf("echo '%s' >> /etc/passwd && echo '%s' >> /etc/shadow", passwdLine, shadowLine)
+	task.Commands = append(task.Commands, injectCmd)
+
+	// 3. HOME & SKEL: La tua logica C tradotta in shell
+	homeCmd := fmt.Sprintf("mkdir -p %s && cp -a /etc/skel/. %s/ 2>/dev/null || true && chown -R %d:%d %s",
+		home, home, uid, gid, home)
+	task.Commands = append(task.Commands, homeCmd)
 
 	return task, nil
 }
@@ -141,26 +130,4 @@ func createLayoutTask(d *distro.Distro, workPath string) (*Task, error) {
 	}
 
 	return task, nil
-}
-
-// getGroupMappingCommand chiamata da createIdentityTask sopra
-func getGroupMappingCommand(login string, adminGroup string, userGroups []string) string {
-	// Uniamo il gruppo admin ai gruppi utente
-	allGroups := append([]string{adminGroup}, userGroups...)
-	var commands []string
-
-	for _, g := range allGroups {
-		if g == "" {
-			continue
-		}
-		// Questo sed cerca la riga del gruppo e appende ",utente" alla fine
-		// Funziona anche se la lista utenti è vuota (es. wheel:x:10:)
-		cmd := fmt.Sprintf("sed -i -E '/^%s:/ s/([^:]*)$/\\1,%s/' /etc/group", g, login)
-		commands = append(commands, cmd)
-	}
-
-	// Pulizia: trasforma ":,utente" in ":utente" per i gruppi che erano inizialmente vuoti
-	commands = append(commands, "sed -i 's/:,/:/g' /etc/group")
-
-	return strings.Join(commands, " && ")
 }

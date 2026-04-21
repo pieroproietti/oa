@@ -1,3 +1,17 @@
+/*
+ * src/actions/oa_users.c
+ * Remastering core: User & Group Identity artisan
+ * oa: eggs in my dialect🥚🥚
+ * 
+ * shell.c (Il Passpartout): L'invenzione geniale. Il ponte perfetto tra il cervello (Go)
+ * e il sistema operativo. Usa fork, exec e waitpid in C per eseguire qualsiasi altra cosa
+ * comandata da Go, garantendoti che il C sappia sempre se il comando ha avuto successo o
+ * ha fallito
+ * 
+ * Author: Piero Proietti <piero.proietti@gmail.com>
+ * License: GPL-3.0-or-later
+ */
+
 #include "oa.h"
 #include <sys/wait.h>
 #include <unistd.h>
@@ -5,7 +19,7 @@
 /**
  * @brief Esegue un comando tramite shell con tracciamento nel log.
  */
-int sys_shell(OA_Context *ctx) {
+int oa_shell(OA_Context *ctx) {
     cJSON *cmd_obj = cJSON_GetObjectItemCaseSensitive(ctx->task, "run_command");
     cJSON *chroot_obj = cJSON_GetObjectItemCaseSensitive(ctx->task, "chroot");
     cJSON *path_obj = cJSON_GetObjectItemCaseSensitive(ctx->root, "pathLiveFs");

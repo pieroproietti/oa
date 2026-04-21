@@ -3,9 +3,16 @@
  * Remastering core: GRUB installation on physical hardware (Krill)
  * oa: eggs in my dialect🥚🥚
  *
+ * umount.c (Il Demolitore): Usa umount2 con MNT_DETACH per smontare tutto in sicurezza, 
+ * ripulendo l'ambiente senza lasciare mount orfani che bloccherebbero il sistema.
+ * 
  * Author: Piero Proietti <piero.proietti@gmail.com>
  * License: GPL-3.0-or-later
  */
+
+#include "oa-umount.h"
+#include <sys/mount.h>
+
 #include "oa.h"
 #include <mntent.h>
 
@@ -20,7 +27,11 @@ int compare_mounts(const void *a, const void *b) {
     return mb->length - ma->length;
 }
 
-int remaster_cleanup(OA_Context *ctx) {
+
+/**
+ * main
+ */
+int oa_umount(OA_Context *ctx) {
     cJSON *pathLiveFs = cJSON_GetObjectItemCaseSensitive(ctx->task, "pathLiveFs");
     if (!pathLiveFs) pathLiveFs = cJSON_GetObjectItemCaseSensitive(ctx->root, "pathLiveFs");
     if (!cJSON_IsString(pathLiveFs)) return 1;

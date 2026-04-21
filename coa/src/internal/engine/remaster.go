@@ -36,7 +36,7 @@ func HandleRemaster(mode string, workPath string, d *distro.Distro) {
 	prePlan := FlightPlan{
 		PathLiveFs: workPath,
 		Mode:       mode,
-		Plan:       []Action{{Command: "oa_remaster_prepare"}},
+		Plan:       []Action{{Command: "oa_mount"}},
 	}
 	executePlan(prePlan)
 

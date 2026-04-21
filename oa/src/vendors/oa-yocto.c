@@ -1,10 +1,12 @@
 /*
  * oa: eggs in my dialect🥚🥚
  *
- * src/vendors/oe-yocto.c
+ * src/vendors/oa-yocto.c
  * Logica di classificazione utenti basata su OpenEmbedded-Core
  * e sulla filosofia di penguins-eggs.
  */
+#include <sys/stat.h>
+#include "oa-yocto.h"
 #include "oa.h"
 
 /**

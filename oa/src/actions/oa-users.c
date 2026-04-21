@@ -1,14 +1,26 @@
 /*
- * src/actions/remaster_users.c
+ * src/actions/oa_users.c
  * Remastering core: User & Group Identity artisan
  * oa: eggs in my dialect🥚🥚
+ * 
+ * users.c (Il Chirurgo): Manipola nativamente passwd e shadow stile Yocto. 
+ * Un'operazione elegantissima che ti salva da infiniti problemi legati all'invocazione 
+ * di chpasswd in un ambiente chrootato a metà.
  *
  * Author: Piero Proietti <piero.proietti@gmail.com>
  * License: GPL-3.0-or-later
  */
-#include "oa.h"
 
-int remaster_users(OA_Context *ctx) {
+#include "oa-users.h"
+
+// --- Inclusioni private di questo modulo ---
+#include "oa-yocto.h"   // <--- ECCO LA CHIAVE! Contiene i prototipi e OE_UID_HUMAN_MIN/MAX
+#include <shadow.h>
+#include <crypt.h>
+#include <pwd.h>
+
+
+int oa_users(OA_Context *ctx) {
     // 1. Lookup a cascata (percorso, utenti, modalità)
     cJSON *pathLiveFs = cJSON_GetObjectItemCaseSensitive(ctx->task, "pathLiveFs");
     if (!pathLiveFs) pathLiveFs = cJSON_GetObjectItemCaseSensitive(ctx->root, "pathLiveFs");

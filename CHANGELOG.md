@@ -17,7 +17,7 @@
 ### 🐛 Fixed
 - **Fedora 43 Boot (BLS/EXT4)**: Resolved "grub rescue" issues by forcing the deactivation of *Boot Loader Specification* (`GRUB_ENABLE_BLSCFG=false`) and applying EXT4 compatibility flags (`^metadata_csum_seed`, `^orphan_file`) during formatting.
 - **Installer Hang (Sync & Cleanup)**: Fixed a deadlock during the final Krill phase on Fedora by making `/var/lib/live` cleanup selective for Debian and introducing a forced `sync` before unmounting partitions.
-- **Chroot Pathing**: Fixed path resolution errors during `sys_shell` execution in chroot environments, ensuring correct injection of hostname and sudoers.
+- **Chroot Pathing**: Fixed path resolution errors during `oa_shell` execution in chroot environments, ensuring correct injection of hostname and sudoers.
 
 ### Packaging
 - **RPM Dependency Mapping**: Corrected Fedora RPM metadata by mapping `sgdisk` requirements to the `gdisk` package.

@@ -1,0 +1,3472 @@
+````
+### 📄 FILE: coa/go.mod
+```text
+module coa
+
+go 1.24.4
+
+require (
+	github.com/AlecAivazis/survey/v2 v2.3.7
+	github.com/spf13/cobra v1.10.2
+	gopkg.in/yaml.v3 v3.0.0-20200313102051-9f266ea9e77c
+	sigs.k8s.io/yaml v1.6.0
+)
+
+require (
+	github.com/cpuguy83/go-md2man/v2 v2.0.7 // indirect
+	github.com/inconshreveable/mousetrap v1.1.0 // indirect
+	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
+	github.com/mattn/go-colorable v0.1.2 // indirect
+	github.com/mattn/go-isatty v0.0.8 // indirect
+	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
+	github.com/russross/blackfriday/v2 v2.1.0 // indirect
+	github.com/spf13/pflag v1.0.9 // indirect
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	golang.org/x/sys v0.0.0-20220722155257-8c9f86f7a55f // indirect
+	golang.org/x/term v0.0.0-20210927222741-03fcf44c2211 // indirect
+	golang.org/x/text v0.4.0 // indirect
+)
+```
+
+### 📄 FILE: coa/README.md
+```markdown
+# coa 🥚
+
+**coa** is the intelligent orchestrator written in Go, designed to be the "Mind" behind the GNU/Linux system remastering process. It acts as a high-level interface for the native **oa** engine, handling system analysis, flight plan generation, and abstracting distribution-specific differences.
+
+## 🚀 Key Features
+
+* **Distro-Agnostic Intelligence**: Automatically recognizes Debian, Arch, Fedora, and their derivatives.
+* **Initramfs Abstraction**: Delegates initrd generation to the engine via dynamic templates, supporting `mkinitcpio`, 9`dracut`, and `mkinitramfs`.
+* **Passepartout Bootloaders**: Manages the automatic download and injection of hybrid BIOS/UEFI bootloaders to ensure successful booting on any hardware.
+* **Bridge Configuration**: Implements physical patching of host configurations, such as `/etc/mkinitcpio.conf`, directly within the isolated working environment.
+* **JSON-Driven**: Compiles complex workflows into a standardized JSON format for atomic execution by the C engine.
+
+## 🛠 Prerequisites
+
+* **Engine**: Requires the `oa` binary installed, typically in `/usr/local/bin/oa`.
+* **Tools**: `xorriso`, `squashfs-tools`, and `cryptsetup` for encrypted mode.
+
+## 📂 Usage
+
+```bash
+# Start a standard ISO production
+sudo coa produce --mode standard
+
+# Clean up the workspace and unmount filesystems
+sudo coa kill
+
+# Detect host distribution information
+coa detect
+```
+
+## 🏗 Architecture
+
+**coa** follows a "Mind and Body" philosophy. While the Go orchestrator handles the logic and planning, the C-native engine (**oa**) performs the heavy lifting using kernel syscalls, OverlayFS for zero-copy mirroring, and high-performance compression.
+
+## 🐧 Part of the penguins-eggs Ecosystem
+
+**coa** is a core component of the next-generation *penguins-eggs* infrastructure, aiming for maximum performance and native integration with modern Linux distributions.
+
+---
+*Developed with the efficiency of Go and the precision of a remastering artisan.*
+```
+
+### 📄 FILE: coa/conf/brain.d/archlinux.d/boot.yaml
+```yaml
+# [ coa brain unit ]
+# family: archlinux
+# area:   boot
+# --------------------------------------------------
+params: "archisobasedir=arch archisolabel=OA_LIVE cow_spacesize=10G"
+  ```
+
+### 📄 FILE: coa/conf/brain.d/archlinux.d/identity.yaml
+```yaml
+# [ coa brain unit ]
+# family: archlinux
+# area:   identitfy
+# --------------------------------------------------
+admin_group: "wheel"
+user_groups: ["video", "audio", "autologin"]```
+
+### 📄 FILE: coa/conf/brain.d/archlinux.d/initrd.yaml
+```yaml
+# [ coa brain unit ]
+# family: archlinux
+# area:   initrd
+# --------------------------------------------------
+command: "KVER=$(ls /lib/modules | head -n 1) && mkinitcpio -c /etc/coa-mkinitcpio.conf -k $KVER -g /boot/initramfs-linux.img"
+setup_files:
+  "/etc/coa-mkinitcpio.conf": |
+    MODULES=(loop overlay squashfs)
+    BINARIES=()
+    FILES=()
+    # Questi hook trasformano un sistema fisso in una Live USB/ISO
+    HOOKS=(base udev microcode modconf kms memdisk archiso archiso_loop_mnt archiso_pxe_common archiso_pxe_nbd archiso_pxe_http archiso_pxe_nfs block filesystems keyboard keymap consolefont fsck)
+    COMPRESSION="zstd"```
+
+### 📄 FILE: coa/conf/brain.d/archlinux.d/layout.yaml
+```yaml
+# [ coa brain unit ]
+# family: archlinux
+# area:   layout
+# --------------------------------------------------
+links:
+  "arch/x86_64/airootfs.sfs": "../../live/filesystem.squashfs"
+```
+
+### 📄 FILE: coa/conf/brain.d/brain-dump.sh
+```bash
+echo "--- START BRAIN DUMP ---"
+for distro_dir in *; do
+    if [ -d "$distro_dir" ]; then
+        distro_name=$(basename "$distro_dir")
+        echo "DISTRO: $distro_name"
+        for yaml_file in "$distro_dir"/*.yaml; do
+            echo "  FILE: $(basename "$yaml_file")"
+            echo "  CONTENT:"
+            # Aggiunge uno spazio di indentazione al contenuto per leggibilità
+            sed 's/^/    /' "$yaml_file"
+            echo "  ---"
+        done
+    fi
+done
+echo "--- END BRAIN DUMP ---"
+```
+
+### 📄 FILE: coa/conf/brain.d/debian.d/boot.yaml
+```yaml
+# [ coa brain unit ]
+# family: debian
+# area:   boot
+# --------------------------------------------------
+params: "boot=live components quiet splash"
+  ```
+
+### 📄 FILE: coa/conf/brain.d/debian.d/identity.yaml
+```yaml
+# [ coa brain unit ]
+# family: debian
+# area:   identity
+# --------------------------------------------------
+admin_group: "sudo"
+user_groups: ["cdrom", "audio", "video", "plugdev", "netdev", "autologin"]```
+
+### 📄 FILE: coa/conf/brain.d/debian.d/initrd.yaml
+```yaml
+# [ coa brain unit ]
+# family: debian
+# area:   initrd
+# --------------------------------------------------
+command: "update-initramfs -u -k all || update-initramfs -c -k all"```
+
+### 📄 FILE: coa/conf/brain.d/debian.d/layout.yaml
+```yaml
+# [ coa brain unit ]
+# family: debian
+# area:   layout
+# --------------------------------------------------
+links: {}
+  ```
+
+### 📄 FILE: coa/conf/brain.d/distro.yaml
+```yaml
+# [ coa brain unit ]
+# --------------------------------------------------
+families:
+  archlinux: "archlinux.d"
+  debian: "debian.d"
+  ubuntu: "debian.d"
+  fedora: "fedora.d"
+  rhel: "fedora.d"
+  centos: "fedora.d"
+  rocky: "fedora.d"
+  almalinux: "fedora.d"
+  ```
+
+### 📄 FILE: coa/conf/brain.d/fedora.d/boot.yaml
+```yaml
+# [ coa brain unit ]
+# family: fedora
+# area:   boot
+# --------------------------------------------------
+
+params: "root=live:CDLABEL=OA_LIVE rd.live.image rd.live.dir=live rd.live.squashimg=filesystem.squashfs selinux=0"
+```
+
+### 📄 FILE: coa/conf/brain.d/fedora.d/identity.yaml
+```yaml
+# [ coa brain unit ]
+# family: fedora
+# area:   identity
+# --------------------------------------------------
+admin_group: "wheel"
+user_groups: ["audio", "video", "plugdev", "netdev", "autologin"]
+```
+
+### 📄 FILE: coa/conf/brain.d/fedora.d/initrd.yaml
+```yaml
+# [ coa brain unit ]
+# family: fedora
+# area:   initrd
+# --------------------------------------------------
+command: "dracut --force --regenerate-all"
+setup_files:
+  "/etc/dracut.conf.d/coa.conf": |
+    hostonly="no"
+    add_dracutmodules+=" dmsquash-live rootfs-block bash "
+    compress="xz"
+```
+
+### 📄 FILE: coa/conf/brain.d/fedora.d/layout.yaml
+```yaml
+# [ coa brain unit ]
+# family: fedora
+# area:   layout
+# --------------------------------------------------
+links: {}
+```
+
+### 📄 FILE: coa/conf/derivatives.yaml
+```yaml
+# derivatives.yaml
+# Tracciamento delle derivate verso la loro origine (distroLike e codenameLike)
+
+# --- DEBIAN ---
+- distroLike: Debian
+  codenameLike: bookworm
+  family: debian
+  derivatives:
+    - kali-rolling
+    - faye
+    - orion-belt
+    - ara
+
+- distroLike: Debian
+  codenameLike: trixie
+  family: debian
+  derivatives:
+    - gigi
+    - lory
+    - echo
+    - orchid
+    - yirmibes
+
+# --- UBUNTU ---
+- distroLike: Ubuntu
+  codenameLike: noble
+  family: debian
+  derivatives:
+    - oracular
+    - plucky
+    - questing
+    - resolute
+    - wilma
+    - xia
+    - zara
+    - zena
+
+# --- FEDORA (Qui matchiamo direttamente il nome della distro) ---
+- distroLike: Fedora
+  codenameLike: rolling
+  family: fedora
+  derivatives:
+    - Almalinux
+    - Nobara
+    - Rocky
+    - Ultramarine
+
+# --- ARCH LINUX ---
+- distroLike: Arch
+  codenameLike: rolling
+  family: archlinux
+  derivatives:
+    - bluestarlinux
+    - zetar```
+
+### 📄 FILE: coa/conf/exclude.list
+```text
+# /etc/coa/excludes.list
+# Modern template for coa/oa remastering
+# Author: Piero Proietti (Based on historical refractasnapshot lists)
+
+# --- Caches & Logs (Heavy & Unneeded) ---
+var/cache/*
+var/tmp/*
+var/log/*.log
+var/log/*.log.?
+var/log/*/*
+*.cache
+
+# --- Package Manager Leftovers ---
+var/lib/apt/lists/*
+var/lib/apt/cache/*
+var/lib/dpkg/*~old
+home/*/.local/share/yay
+
+# --- Snapshots, Backups & Swap ---
+.snapshots/*
+timeshift
+var/backups/*
+swapfile
+swap/*
+lost+found
+
+# --- Hardware / Boot (Regenerated dynamically) ---
+boot/*rescue*
+boot/grub/grub.cfg
+boot/grub/device.map
+etc/blkid.tab
+etc/crypttab
+etc/udev/rules.d/70-persistent-net.rules
+etc/udev/rules.d/70-persistent-cd.rules```
+
+### 📄 FILE: coa/src/main.go
+```go
+package main
+
+import (
+	"coa/src/cmd"
+	"os"
+)
+
+func main() {
+	if err := cmd.Execute(); err != nil {
+		os.Exit(1)
+	}
+}
+```
+
+### 📄 FILE: coa/src/cmd/adapt.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var adaptCmd = &cobra.Command{
+	Use:   "adapt",
+	Short: "Adapt the video resolution to the Virtual Machine window",
+	Long: `The 'adapt' command is a post-boot utility specifically designed for live environments running inside Virtual Machines (such as VirtualBox, VMware, or QEMU/KVM). 
+
+When executed, it forces the guest operating system to dynamically resize its display resolution to perfectly match the current dimensions of the host's VM window, improving the user experience during testing.`,
+	Example: `  # Automatically resize the live system display to fit the VM window
+  coa adapt`,
+	Run: func(cmd *cobra.Command, args []string) {
+		CheckSudoRequirements(cmd.Name(), false)
+		engine.HandleAdapt()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(adaptCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/brain.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/pilot"
+
+	"github.com/spf13/cobra"
+)
+
+// brainCmd rappresenta il comando principale per la gestione del cervello
+var brainCmd = &cobra.Command{
+	Use:   "brain",
+	Short: "Manage the modular configuration (brain.d)",
+	Long:  `The 'brain' command provides tools to validate and manage the distribution-specific YAML configurations located in brain.d.`,
+}
+
+// lintCmd esegue la pulizia e la validazione dei file YAML
+var lintCmd = &cobra.Command{
+	Use:   "lint",
+	Short: "Validate brain structure and add missing headers",
+	Long:  `Scan the brain.d directory, verify YAML syntax, and ensure every file has the correct functional header.`,
+	Example: `  # Validate and annotate all brain files
+  coa brain lint`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Non serve sudo per il lint di solito, ma se vuoi essere sicuro:
+		CheckSudoRequirements(cmd.Name(), false)
+		pilot.RunBrainLint()
+	},
+}
+
+func init() {
+	// Aggiungiamo lint come sotto-comando di brain
+	brainCmd.AddCommand(lintCmd)
+
+	// Aggiungiamo brain al comando principale rootCmd
+	rootCmd.AddCommand(brainCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/build.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/builder"
+	"coa/src/internal/distro"
+
+	"github.com/spf13/cobra"
+)
+
+var buildCmd = &cobra.Command{
+	Use:   "build",
+	Short: "Compile binaries and generate native distribution packages (.deb, PKGBUILD)",
+	Long: `The 'build' command is the integrated packaging tool for the coa/oa ecosystem.
+It orchestrates the full compilation of both the C-native engine (oa) and the Go-based orchestrator (coa), triggers the automatic generation of documentation and shell completions, and finally packages everything into native distribution formats like .deb (Debian/Ubuntu) or PKGBUILD (Arch Linux).`,
+	Example: `  # Compile the ecosystem and generate native packages
+  coa build`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Non richiede i privilegi di root
+		CheckSudoRequirements(cmd.Name(), false)
+
+		// Rileva la distribuzione host (i Sensi)
+		myDistro := distro.NewDistro()
+
+		// Passa la palla al motore di build, includendo la versione di Git
+		builder.HandleBuild(myDistro, AppVersion)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(buildCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/detect.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/distro"
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var detectCmd = &cobra.Command{
+	Use:   "detect",
+	Short: "Display detected host system information",
+	Long: `The 'detect' command is a read-only diagnostic utility for the user. 
+
+It performs a quick scan of the host environment to identify the running GNU/Linux distribution, its parent family (e.g., mapping Ubuntu to the Debian family), and the hardware architecture. 
+
+It does not save this state or alter any configuration; it simply provides a clear overview of the environment 'coa' is currently running in.`,
+	Example: `  # Display the host system profile
+  coa detect`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// Controllo sudo: è un comando informativo, non serve root
+		CheckSudoRequirements(cmd.Name(), false)
+
+		// 1. Rileva la distribuzione host
+		myDistro := distro.NewDistro()
+
+		// 2. Passa l'oggetto all'engine per la stampa a video
+		engine.HandleDetect(myDistro)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(detectCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/docs.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/engine"
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
+
+var targetDir string
+
+var docsCmd = &cobra.Command{
+	Use:    "_gen_docs",
+	Short:  "Generate man pages, markdown wiki, and completion scripts",
+	Hidden: true, // Completamente invisibile all'utente finale
+	RunE: func(cmd *cobra.Command, args []string) error {
+		CheckSudoRequirements(cmd.Name(), false)
+
+		if err := engine.HandleDocs(rootCmd, targetDir); err != nil {
+			return fmt.Errorf("failed to generate documentation: %w", err)
+		}
+		return nil
+	},
+}
+
+func init() {
+	// Impostiamo un percorso di default comodo per lo sviluppo locale
+	docsCmd.Flags().StringVarP(&targetDir, "target", "t", "./docs", "Base target directory for all documentation types")
+	rootCmd.AddCommand(docsCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/export.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var cleanExport bool
+
+var exportCmd = &cobra.Command{
+	Use:    "export",
+	Short:  "Export artifacts (iso, pkg) to a remote Proxmox storage",
+	Long:   "Export generated ISOs or native packages to a remote server via SCP.",
+	Hidden: false, // Sparisce da coa --help, ma continua a funzionare!
+}
+
+var exportIsoCmd = &cobra.Command{
+	Use:   "iso",
+	Short: "Export the latest ISO to a remote Proxmox storage",
+	Run: func(cmd *cobra.Command, args []string) {
+		CheckSudoRequirements("export iso", false)
+		engine.HandleExportIso(cleanExport)
+	},
+}
+
+var exportPkgCmd = &cobra.Command{
+	Use:   "pkg",
+	Short: "Export the latest generated native package (.deb or .pkg.tar.zst) to Proxmox",
+	Run: func(cmd *cobra.Command, args []string) {
+		CheckSudoRequirements("export pkg", false)
+		engine.HandleExportPkg(cleanExport)
+	},
+}
+
+func init() {
+	exportCmd.PersistentFlags().BoolVar(&cleanExport, "clean", false, "Clean old versions on remote server before exporting")
+
+	exportCmd.AddCommand(exportIsoCmd)
+	exportCmd.AddCommand(exportPkgCmd)
+	rootCmd.AddCommand(exportCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/kill.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var killCmd = &cobra.Command{
+	Use:   "kill",
+	Short: "Free the nest and unmount filesystems",
+	Long: `Safely tears down the remastering environment. 
+It uses MNT_DETACH to unmount the OverlayFS and virtual API filesystems (/dev, /proc, /sys) without affecting the running host, then removes the temporary workspace.`,
+	Example: `  # Clean up the default workspace
+  sudo coa kill`,
+	Run: func(cmd *cobra.Command, args []string) {
+		CheckSudoRequirements(cmd.Name(), true)
+		engine.HandleKill()
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(killCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/remaster.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/distro"
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var (
+	produceMode string
+	producePath string
+)
+
+var remasterCmd = &cobra.Command{
+	Use:   "remaster",
+	Short: "Start a system remastering flight (ISO production)",
+	Long: `The 'remaster' command orchestrates the creation of a bootable live ISO. 
+It uses OverlayFS for a zero-copy approach and produces artifacts ready for distribution.`,
+	Example: `  # Start a standard ISO remastering
+  sudo coa remaster --mode standard`,
+	Run: func(cmd *cobra.Command, args []string) {
+		CheckSudoRequirements(cmd.Name(), true)
+		myDistro := distro.NewDistro()
+		engine.HandleRemaster(produceMode, producePath, myDistro) // Il gestore interno può restare Produce o essere rinominato in HandleRemaster
+	},
+}
+
+func init() {
+	remasterCmd.Flags().StringVar(&produceMode, "mode", "standard", "standard, clone, or crypted")
+	remasterCmd.Flags().StringVar(&producePath, "path", "/home/eggs", "working directory")
+
+	rootCmd.AddCommand(remasterCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/root.go
+```go
+package cmd
+
+import (
+	"fmt"
+	"os"
+
+	"github.com/spf13/cobra"
+)
+
+// AppVersion verrà iniettata in fase di compilazione tramite i ldflags (es. -X 'coa/src/cmd.AppVersion=v0.5.0')
+var AppVersion = "dev"
+
+var rootCmd = &cobra.Command{
+	Use:     "coa",
+	Aliases: []string{"eggs"},
+	Short:   "coa (brooding in my dialect) - The Mind orchestrator",
+	Long:    "coa is the orchestrator written in Go, designed to be the \"Mind\" behind the GNU/Linux system remastering process.",
+	CompletionOptions: cobra.CompletionOptions{
+		DisableDefaultCmd: true,
+	},
+}
+
+// Execute viene chiamato dal main.go per avviare il parsing della CLI
+func Execute() error {
+	return rootCmd.Execute()
+}
+
+// CheckSudoRequirements è un helper condiviso tra i comandi per verificare i privilegi
+func CheckSudoRequirements(cmdName string, shouldBeRoot bool) {
+	isRoot := os.Geteuid() == 0
+
+	if shouldBeRoot && !isRoot {
+		fmt.Printf("\n\033[1;31m[ERROR]\033[0m The command 'coa %s' requires root privileges.\n", cmdName)
+		fmt.Printf("Please use: \033[1msudo coa %s\033[0m\n\n", cmdName)
+		os.Exit(1)
+	}
+
+	if !shouldBeRoot && isRoot {
+		fmt.Printf("\n\033[1;31m[ERROR]\033[0m Do not run 'coa %s' with sudo.\n", cmdName)
+		fmt.Printf("Run it as a normal user: \033[1mcoa %s\033[0m\n\n", cmdName)
+		os.Exit(1)
+	}
+}
+```
+
+### 📄 FILE: coa/src/cmd/sysinstall.go
+```go
+package cmd
+
+import (
+	"coa/src/internal/distro"
+	"coa/src/internal/engine"
+
+	"github.com/spf13/cobra"
+)
+
+var sysinstallCmd = &cobra.Command{
+	Use:   "sysinstall",
+	Short: "Install the live system to a physical disk",
+	Long: `The 'sysinstall' command is the interactive system installer.
+It gathers user preferences via TUI and orchestrates the physical installation 
+on the target disk.
+WARNING: This operation is destructive.`,
+	Example: `  # Launch the system installer
+  sudo coa sysinstall`,
+	Run: func(cmd *cobra.Command, args []string) {
+		// 1. Verifica i privilegi di root (necessari per partizionare e montare)
+		CheckSudoRequirements(cmd.Name(), true)
+
+		// 2. Rileva la distribuzione host (necessaria per i comandi shell di krill)
+		myDistro := distro.NewDistro()
+
+		// 3. Passa la distro rilevata a HandleKrill
+		engine.HandleKrill(myDistro)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(sysinstallCmd)
+}
+```
+
+### 📄 FILE: coa/src/cmd/versions.go
+```go
+package cmd
+
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
+
+var versionCmd = &cobra.Command{
+	Use:   "version",
+	Short: "Print the version number of coa",
+	Run: func(cmd *cobra.Command, args []string) {
+		// Non richiede permessi di root
+		CheckSudoRequirements(cmd.Name(), false)
+		fmt.Printf("coa %s - The Mind of remaster\n", AppVersion)
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(versionCmd)
+}
+```
+
+### 📄 FILE: coa/src/internal/assets/assets.go
+```go
+package assets
+
+import (
+	"embed"
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+//go:embed configs/*
+var internalConfigs embed.FS
+
+// ExtractConfigs estrae le configurazioni incorporate nel binario verso una directory temporanea
+func ExtractConfigs(destRoot string) error {
+	fmt.Printf("[DEBUG] Tentativo di estrazione in: %s\n", destRoot)
+
+	// Creiamo la radice
+	if err := os.MkdirAll(destRoot, 0755); err != nil {
+		return err
+	}
+
+	// Vediamo cosa c'è nell'embed prima di copiare
+	entries, err := internalConfigs.ReadDir("configs")
+	if err != nil {
+		return fmt.Errorf("L'EMBED È VUOTO O ERRATO: %w", err)
+	}
+	fmt.Printf("[DEBUG] Trovate %d entries nella cartella embed 'configs'\n", len(entries))
+
+	return fsCopy(internalConfigs, "configs", destRoot)
+}
+
+func fsCopy(fs embed.FS, src, dest string) error {
+	entries, err := fs.ReadDir(src)
+	if err != nil {
+		return err
+	}
+
+	for _, entry := range entries {
+		srcPath := filepath.Join(src, entry.Name())
+		destPath := filepath.Join(dest, entry.Name())
+
+		if entry.IsDir() {
+			if err := os.MkdirAll(destPath, 0755); err != nil {
+				return err
+			}
+			if err := fsCopy(fs, srcPath, destPath); err != nil {
+				return err
+			}
+		} else {
+			data, err := fs.ReadFile(srcPath)
+			if err != nil {
+				return err
+			}
+			// Assicuriamoci che la directory padre esista (es. configs/mkinitcpio)
+			os.MkdirAll(filepath.Dir(destPath), 0755)
+			if err := os.WriteFile(destPath, data, 0644); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+```
+
+### 📄 FILE: coa/src/internal/builder/build_arch.go
+```go
+package builder
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// buildArchPackage genera il file PKGBUILD necessario per creare il pacchetto su Arch Linux.
+func buildArchPackage(projRoot, baseVer, relNum string) {
+	pkgbuildContent := fmt.Sprintf(`# Maintainer: Piero Proietti <piero.proietti@gmail.com>
+pkgname=oa-tools
+pkgver=%s
+pkgrel=%s
+pkgdesc="oa-tools universal Linux remastering"
+arch=('x86_64')
+license=('GPL3')
+depends=('archiso' 'xorriso' 'squashfs-tools')
+conflicts=('penguins-eggs')
+options=(!debug)
+
+package() {
+    # 1. Installazione binari e creazione alias eggs
+    install -Dm755 "${startdir}/oa/oa" "${pkgdir}/usr/local/bin/oa"
+    install -Dm755 "${startdir}/coa/coa" "${pkgdir}/usr/local/bin/coa"
+    ln -s coa "${pkgdir}/usr/local/bin/eggs"
+
+    # 2. Documentazione (Man pages)
+    install -Dm644 "${startdir}/coa/docs/man/"*.1 -t "${pkgdir}/usr/share/man/man1/"
+
+    # 3. Completamenti shell e relativi alias
+    install -Dm644 "${startdir}/coa/docs/completion/coa.bash" "${pkgdir}/usr/share/bash-completion/completions/coa"
+    install -Dm644 "${startdir}/coa/docs/completion/coa.zsh" "${pkgdir}/usr/share/zsh/vendor-completions/_coa"
+    install -Dm644 "${startdir}/coa/docs/completion/coa.fish" "${pkgdir}/usr/share/fish/vendor_completions.d/coa.fish"
+
+    ln -s coa "${pkgdir}/usr/share/bash-completion/completions/eggs"
+    ln -s _coa "${pkgdir}/usr/share/zsh/vendor-completions/_eggs"
+    ln -s coa.fish "${pkgdir}/usr/share/fish/vendor_completions.d/eggs.fish"
+
+    # 4. FIX: Patch per l'autocompletamento Bash
+    echo "complete -o default -F __start_coa eggs" >> "${pkgdir}/usr/share/bash-completion/completions/coa"
+}
+`, baseVer, relNum)
+
+	err := os.WriteFile(filepath.Join(projRoot, "PKGBUILD"), []byte(pkgbuildContent), 0644)
+	if err != nil {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m Failed to write PKGBUILD: %v\n", err)
+		return
+	}
+	fmt.Printf("\033[1;32m[SUCCESS]\033[0m PKGBUILD generato: %s-%s\n", baseVer, relNum)
+}
+```
+
+### 📄 FILE: coa/src/internal/builder/build_debian.go
+```go
+package builder
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+)
+
+func buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion string) {
+	pkgName := fmt.Sprintf("oa-tools_%s_amd64", pkgVersion)
+	buildDir := filepath.Join("/tmp", pkgName)
+
+	// Pulizia preventiva
+	os.RemoveAll(buildDir)
+
+	// Creazione struttura directory standard Debian [cite: 41]
+	dirs := []string{
+		filepath.Join(buildDir, "DEBIAN"),
+		filepath.Join(buildDir, "usr/local/bin"),
+		filepath.Join(buildDir, "usr/share/man/man1"),
+		filepath.Join(buildDir, "usr/share/bash-completion/completions"),
+		filepath.Join(buildDir, "usr/share/zsh/vendor-completions"),
+		filepath.Join(buildDir, "usr/share/fish/vendor_completions.d"),
+	}
+	for _, dir := range dirs {
+		os.MkdirAll(dir, 0755)
+	}
+
+	// 1. Installazione binari e creazione alias eggs
+	copyFile(filepath.Join(oaDir, "oa"), filepath.Join(buildDir, "usr/local/bin/oa"))
+	copyFile(filepath.Join(coaDir, "coa"), filepath.Join(buildDir, "usr/local/bin/coa"))
+	os.Chmod(filepath.Join(buildDir, "usr/local/bin/oa"), 0755)
+	os.Chmod(filepath.Join(buildDir, "usr/local/bin/coa"), 0755)
+
+	// Link simbolico per il comando eggs
+	os.Symlink("coa", filepath.Join(buildDir, "usr/local/bin/eggs"))
+
+	// 2. Documentazione (Man pages) [cite: 41]
+	manDir := filepath.Join(buildDir, "usr/share/man/man1")
+	exec.Command("sh", "-c", fmt.Sprintf("cp %s/docs/man/*.1 %s/ && gzip -9 %s/*.1", coaDir, manDir, manDir)).Run()
+
+	// 3. Completamenti shell e relativi alias
+	bashTarget := filepath.Join(buildDir, "usr/share/bash-completion/completions/coa")
+	copyFile(filepath.Join(coaDir, "docs/completion/coa.bash"), bashTarget)
+	copyFile(filepath.Join(coaDir, "docs/completion/coa.zsh"), filepath.Join(buildDir, "usr/share/zsh/vendor-completions/_coa"))
+	copyFile(filepath.Join(coaDir, "docs/completion/coa.fish"), filepath.Join(buildDir, "usr/share/fish/vendor_completions.d/coa.fish"))
+
+	// Symlink per i completamenti dell'alias eggs
+	os.Symlink("coa", filepath.Join(buildDir, "usr/share/bash-completion/completions/eggs"))
+	os.Symlink("_coa", filepath.Join(buildDir, "usr/share/zsh/vendor-completions/_eggs"))
+	os.Symlink("coa.fish", filepath.Join(buildDir, "usr/share/fish/vendor_completions.d/eggs.fish"))
+
+	// 4. FIX: Patch per l'autocompletamento Bash
+	// Aggiungiamo la riga che associa la funzione di coa all'alias eggs
+	f, err := os.OpenFile(bashTarget, os.O_APPEND|os.O_WRONLY, 0644)
+	if err == nil {
+		f.WriteString("\n# eggs alias completion support\ncomplete -o default -F __start_coa eggs\n")
+		f.Close()
+	}
+
+	// 5. Generazione file control [cite: 41]
+	controlContent := fmt.Sprintf(`Package: oa-tools
+Version: %s
+Architecture: amd64
+Maintainer: Piero Proietti <piero.proietti@gmail.com>
+Depends: squashfs-tools, xorriso, live-boot, live-boot-initramfs-tools, dosfstools, mtools
+Conflicts: penguins-eggs
+Description: coa is the mind and oa the arm
+`, pkgVersion)
+
+	os.WriteFile(filepath.Join(buildDir, "DEBIAN", "control"), []byte(controlContent), 0644)
+
+	// 6. Impacchettamento [cite: 41]
+	fmt.Println("\033[1;34m[build]\033[0m Packing .deb archive...")
+	dpkgCmd := exec.Command("dpkg-deb", "--build", buildDir)
+	dpkgCmd.Stdout, dpkgCmd.Stderr = os.Stdout, os.Stderr
+	dpkgCmd.Run()
+
+	// Spostamento del pacchetto finale nella root del progetto
+	debFile := pkgName + ".deb"
+	finalTarget := filepath.Join(projRoot, debFile)
+	data, _ := os.ReadFile(filepath.Join("/tmp", debFile))
+	os.WriteFile(finalTarget, data, 0644)
+
+	// Pulizia file temporanei
+	os.RemoveAll(buildDir)
+	os.Remove(filepath.Join("/tmp", debFile))
+
+	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Package created: \033[1m%s\033[0m\n", finalTarget)
+}
+```
+
+### 📄 FILE: coa/src/internal/builder/build_fedora.go
+```go
+package builder
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+)
+
+func buildFedoraPackage(projRoot, oaDir, coaDir, baseVer, relNum string) {
+	pkgName := fmt.Sprintf("oa-tools-%s-%s", baseVer, relNum)
+	buildRoot := filepath.Join("/tmp", "rpmbuild_"+pkgName)
+
+	// Pulizia e creazione struttura standard RPM
+	os.RemoveAll(buildRoot)
+	dirs := []string{"BUILD", "BUILDROOT", "RPMS", "SOURCES", "SPECS", "SRPMS"}
+	for _, d := range dirs {
+		os.MkdirAll(filepath.Join(buildRoot, d), 0755)
+	}
+
+	specPath := filepath.Join(buildRoot, "SPECS", "oa-tools.spec")
+
+	// Il blocco spec[cite: 38, 39].
+	// Usa macro %{nil} per saltare l'estrazione debug sui binari Go/C.
+	specContent := fmt.Sprintf(`%%define debug_package %%{nil}
+
+Name:           oa-tools
+Version:        %s
+Release:        %s%%{?dist}
+Summary:        coa is the mind and oa the arm
+License:        GPLv3
+URL:            https://penguins-eggs.net/blog/eggs-bananas
+
+Requires:       squashfs-tools, xorriso, dosfstools, mtools, dracut-live, gdisk
+Conflicts:      penguins-eggs
+
+%%description
+oa-tools universal Linux remastering. 
+oa is the dialect version for eggs.
+
+%%prep
+# Nessuna preparazione, usiamo i binari compilati dal Go builder
+
+%%build
+# Nessuna build, binari gia pronti
+
+%%install
+rm -rf %%{buildroot}
+mkdir -p %%{buildroot}/usr/local/bin
+mkdir -p %%{buildroot}/usr/share/man/man1
+mkdir -p %%{buildroot}/usr/share/bash-completion/completions
+mkdir -p %%{buildroot}/usr/share/zsh/vendor-completions
+mkdir -p %%{buildroot}/usr/share/fish/vendor_completions.d
+
+# 1. Copia dei binari e creazione alias eggs
+install -m 0755 %s/oa %%{buildroot}/usr/local/bin/oa
+install -m 0755 %s/coa %%{buildroot}/usr/local/bin/coa
+ln -s coa %%{buildroot}/usr/local/bin/eggs
+
+# 2. Documentazione
+cp %s/docs/man/*.1 %%{buildroot}/usr/share/man/man1/
+gzip -9 %%{buildroot}/usr/share/man/man1/*.1
+
+# 3. Completamenti e relativi symlink
+install -m 0644 %s/docs/completion/coa.bash %%{buildroot}/usr/share/bash-completion/completions/coa
+install -m 0644 %s/docs/completion/coa.zsh %%{buildroot}/usr/share/zsh/vendor-completions/_coa
+install -m 0644 %s/docs/completion/coa.fish %%{buildroot}/usr/share/fish/vendor_completions.d/coa.fish
+
+ln -s coa %%{buildroot}/usr/share/bash-completion/completions/eggs
+ln -s _coa %%{buildroot}/usr/share/zsh/vendor-completions/_eggs
+ln -s coa.fish %%{buildroot}/usr/share/fish/vendor_completions.d/eggs.fish
+
+# 4. FIX: Patch per l'autocompletamento Bash
+echo "complete -o default -F __start_coa eggs" >> %%{buildroot}/usr/share/bash-completion/completions/coa
+
+%%files
+/usr/local/bin/oa
+/usr/local/bin/coa
+/usr/local/bin/eggs
+/usr/share/man/man1/*
+/usr/share/bash-completion/completions/coa
+/usr/share/bash-completion/completions/eggs
+/usr/share/zsh/vendor-completions/_coa
+/usr/share/zsh/vendor-completions/_eggs
+/usr/share/fish/vendor_completions.d/coa.fish
+/usr/share/fish/vendor_completions.d/eggs.fish
+`, baseVer, relNum, oaDir, coaDir, coaDir, coaDir, coaDir, coaDir)
+
+	os.WriteFile(specPath, []byte(specContent), 0644)
+
+	fmt.Println("\033[1;34m[build]\033[0m Packing .rpm archive...")
+
+	// Eseguiamo rpmbuild specificando la cartella temporanea come _topdir [cite: 40]
+	rpmCmd := exec.Command("rpmbuild", "-bb",
+		"--define", fmt.Sprintf("_topdir %s", buildRoot),
+		specPath)
+	rpmCmd.Stdout, rpmCmd.Stderr = os.Stdout, os.Stderr
+
+	if err := rpmCmd.Run(); err != nil {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m RPM build failed: %v\n", err)
+		return
+	}
+
+	// Recuperiamo il file generato in RPMS/x86_64 [cite: 40]
+	rpmDir := filepath.Join(buildRoot, "RPMS", "x86_64")
+	rpmFiles, err := filepath.Glob(filepath.Join(rpmDir, "*.rpm"))
+
+	if err == nil && len(rpmFiles) > 0 {
+		for _, file := range rpmFiles {
+			finalTarget := filepath.Join(projRoot, filepath.Base(file))
+			copyFile(file, finalTarget)
+			fmt.Printf("\033[1;32m[SUCCESS]\033[0m Package created: \033[1m%s\033[0m\n", finalTarget)
+		}
+	} else {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m Could not find generated RPM package in %s\n", rpmDir)
+	}
+
+	// Pulizia
+	os.RemoveAll(buildRoot)
+}
+```
+
+### 📄 FILE: coa/src/internal/builder/build.go
+```go
+package builder
+
+import (
+	"coa/src/internal/distro"
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"strings"
+)
+
+var AppVersion string
+
+// HandleBuild coordina la compilazione e delega il packaging ai file specifici
+func HandleBuild(d *distro.Distro, version string) {
+	AppVersion = version
+	baseVer, relNum := parseGitVersion(version)
+	projRoot, oaDir, coaDir := getProjectPaths()
+
+	fmt.Println("\033[1;36m====================================================\033[0m")
+	fmt.Println("\033[1;36m       COA BUILDER - Native Package Generation      \033[0m")
+	fmt.Println("\033[1;36m====================================================\033[0m")
+	fmt.Printf("\033[1;34m[build]\033[0m Building version: %s\n", AppVersion)
+
+	// 1. Compilazione motore C
+	makeCmd := exec.Command("make", "-C", oaDir, fmt.Sprintf("VERSION=%s", AppVersion), "clean", "all")
+	makeCmd.Stdout, makeCmd.Stderr = os.Stdout, os.Stderr
+	if err := makeCmd.Run(); err != nil {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m Engine compilation failed: %v\n", err)
+		return
+	}
+
+	// 2. Compilazione orchestratore Go
+	ldflags := fmt.Sprintf("-X 'coa/src/cmd.AppVersion=%s'", AppVersion)
+	goCmd := exec.Command("go", "build", "-ldflags", ldflags, "-o", "coa", "./src")
+	goCmd.Dir = coaDir
+	goCmd.Stdout, goCmd.Stderr = os.Stdout, os.Stderr
+	if err := goCmd.Run(); err != nil {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m Orchestrator compilation failed: %v\n", err)
+		return
+	}
+
+	// 3. Generazione Documentazione
+	fmt.Println("\033[1;34m[build]\033[0m Generating documentation and completions...")
+	if err := generateDocs(coaDir); err != nil {
+		fmt.Printf("\033[1;31m[ERROR]\033[0m Docs generation failed: %v\n", err)
+		return
+	}
+
+	// 4. Routing verso i file specifici
+	switch d.FamilyID {
+	case "archlinux":
+		//buildArchPackage(projRoot, coaDir, baseVer, relNum)
+		buildArchPackage(projRoot, baseVer, relNum)
+	case "fedora", "rhel", "centos", "rocky", "almalinux":
+		buildFedoraPackage(projRoot, oaDir, coaDir, baseVer, relNum)
+	default:
+		pkgVersion := fmt.Sprintf("%s-%s", baseVer, relNum)
+		buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion)
+	}
+}
+
+// Utility condivise
+
+func parseGitVersion(v string) (string, string) {
+	cleanV := strings.TrimPrefix(v, "v")
+	parts := strings.Split(cleanV, "-")
+	baseVer := parts[0]
+	relNum := "1"
+	if len(parts) > 1 {
+		relNum = parts[1]
+	}
+	return baseVer, relNum
+}
+
+func generateDocs(coaDir string) error {
+	docPath := filepath.Join(coaDir, "docs")
+	genCmd := exec.Command("./coa", "_gen_docs", "--target", docPath)
+	genCmd.Dir = coaDir
+	genCmd.Stdout, genCmd.Stderr = os.Stdout, os.Stderr
+	return genCmd.Run()
+}
+
+func getProjectPaths() (string, string, string) {
+	cwd, _ := os.Getwd()
+	projRoot := cwd
+	if filepath.Base(cwd) == "coa" {
+		projRoot = filepath.Dir(cwd)
+	}
+	return projRoot, filepath.Join(projRoot, "oa"), filepath.Join(projRoot, "coa")
+}
+
+func copyFile(src, dst string) error {
+	data, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(dst, data, 0644)
+}
+```
+
+### 📄 FILE: coa/src/internal/distro/distro.go
+```go
+// Copyright 2026 Piero Proietti <piero.proietti@gmail.com>.
+// All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package distro
+
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+)
+
+// Distro rappresenta le informazioni dell'ambiente host "purificate"
+type Distro struct {
+	DistroID       string
+	CodenameID     string
+	ReleaseID      string
+	FamilyID       string
+	DistroLike     string
+	DistroUniqueID string
+}
+
+// DerivativeMapping mappa la struttura del file YAML
+type DerivativeMapping struct {
+	DistroLike   string   `json:"distroLike"`
+	CodenameLike string   `json:"codenameLike"`
+	Family       string   `json:"family"`
+	Derivatives  []string `json:"derivatives"`
+}
+
+// parseOsRelease legge /etc/os-release
+func parseOsRelease() map[string]string {
+	info := make(map[string]string)
+	file, err := os.Open("/etc/os-release")
+	if err != nil {
+		return info
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.Contains(line, "=") {
+			parts := strings.SplitN(line, "=", 2)
+			key := parts[0]
+			val := strings.Trim(parts[1], `"'`)
+			info[key] = val
+		}
+	}
+	return info
+}
+
+// resolveDerivative cerca l'identità originale nel file YAML
+func resolveDerivative(distroID string, codenameID string) (bool, *Distro) {
+	// Ordine di ricerca: Locale (sviluppo) -> Sistema (produzione)
+	paths := []string{
+		"conf/derivatives.yaml",
+		"/etc/coa/derivatives.yaml",
+		"derivatives.yaml",
+	}
+
+	var yamlData []byte
+	var err error
+	for _, p := range paths {
+		yamlData, err = os.ReadFile(p)
+		if err == nil {
+			break // Trovato!
+		}
+	}
+
+	if err != nil {
+		fmt.Println("\033[1;33m[coa]\033[0m Attenzione: file derivatives.yaml non trovato.")
+		return false, nil
+	}
+
+	var mappings []DerivativeMapping
+	if err := yaml.Unmarshal(yamlData, &mappings); err != nil {
+		fmt.Printf("\033[1;31m[coa]\033[0m Errore nel parsing di derivatives.yaml: %v\n", err)
+		return false, nil
+	}
+
+	for _, mapping := range mappings {
+		for _, deriv := range mapping.Derivatives {
+			if strings.EqualFold(deriv, distroID) || strings.EqualFold(deriv, codenameID) {
+				return true, &Distro{
+					DistroID:       distroID,
+					CodenameID:     codenameID,
+					FamilyID:       mapping.Family,
+					DistroLike:     mapping.DistroLike,
+					DistroUniqueID: mapping.CodenameLike,
+				}
+			}
+		}
+	}
+	return false, nil
+}
+
+// NewDistro inizializza e riconosce la Distro
+func NewDistro() *Distro {
+	osInfo := parseOsRelease()
+
+	rawID := osInfo["ID"]
+	rawCodename := osInfo["VERSION_CODENAME"]
+	rawRelease := osInfo["VERSION_ID"]
+
+	idLower := strings.ToLower(rawID)
+
+	d := &Distro{
+		DistroID:   rawID,
+		CodenameID: rawCodename,
+		ReleaseID:  rawRelease,
+	}
+
+	switch idLower {
+	case "debian":
+		d.FamilyID = "debian"
+		d.DistroLike = "Debian"
+		d.DistroUniqueID = rawCodename
+		return d
+	case "arch":
+		d.FamilyID = "archlinux"
+		d.DistroLike = "Arch"
+		d.DistroUniqueID = "rolling"
+		return d
+	case "fedora":
+		d.FamilyID = "fedora"
+		d.DistroLike = "Fedora"
+		d.DistroUniqueID = "rolling"
+		return d
+	}
+
+	found, derivativeDistro := resolveDerivative(rawID, rawCodename)
+	if found {
+		return derivativeDistro
+	}
+
+	fmt.Printf("\033[1;31m[coa]\033[0m Distro sconosciuta (%s/%s). Aggiungila a derivatives.yaml!\n", rawID, rawCodename)
+	os.Exit(1)
+	return nil
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/coa-live-bootloader.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+)
+
+// LiveBootloader utilizza la variabile globale BootloaderRoot
+func LiveBootloader(workDir string) ([]Action, error) {
+	var actions []Action
+	isodir := filepath.Join(workDir, "isodir")
+
+	// 1. Definiamo i percorsi di destinazione interni alla ISO
+	grubEfiDest := filepath.Join(isodir, "boot/grub/x86_64-efi")
+	isolinuxDest := filepath.Join(isodir, "isolinux")
+	efiBootDest := filepath.Join(isodir, "EFI/BOOT")
+
+	// 2. Creazione Directory tramite Go
+	dirs := []string{grubEfiDest, isolinuxDest, efiBootDest}
+	for _, d := range dirs {
+		if err := os.MkdirAll(d, 0755); err != nil {
+			return nil, err
+		}
+	}
+
+	// 3. Il Trampolino GRUB nativo in Go
+	trampolino := "search --file --set=root /live/vmlinuz\n" +
+		"set prefix=($root)/boot/grub\n" +
+		"configfile $prefix/grub.cfg\n"
+
+	trampolinoPath := filepath.Join(efiBootDest, "grub.cfg")
+	if err := os.WriteFile(trampolinoPath, []byte(trampolino), 0644); err != nil {
+		return nil, err
+	}
+
+	// 4. AZIONI PER IL MOTORE OA: Copia usando BootloaderRoot
+
+	// A. Copia dei moduli GRUB
+	srcGrub := filepath.Join(BootloaderRoot, "grub/x86_64-efi/*")
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Copia moduli GRUB da penguins-bootloaders",
+		RunCommand: fmt.Sprintf("cp -r %s %s/", srcGrub, grubEfiDest),
+	})
+
+	// B. Copia dei file ISOLINUX
+	srcIsolinux := filepath.Join(BootloaderRoot, "isolinux/*")
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Copia file ISOLINUX da penguins-bootloaders",
+		RunCommand: fmt.Sprintf("cp -r %s %s/", srcIsolinux, isolinuxDest),
+	})
+
+	// C. Costruzione dell'immagine EFI (efi.img)
+	efiImgPath := filepath.Join(isodir, "boot/grub/efi.img")
+	srcEfiMonolithic := filepath.Join(BootloaderRoot, "grub/monolithic/grubx64.efi")
+
+	cmdEfiImg := fmt.Sprintf(
+		"dd if=/dev/zero of=%s bs=1k count=2048 && "+
+			"mkfs.vfat %s && "+
+			"mmd -i %s ::/EFI && mmd -i %s ::/EFI/BOOT && "+
+			"mcopy -i %s %s ::/EFI/BOOT/BOOTX64.EFI && "+
+			"mcopy -i %s %s ::/EFI/BOOT/grub.cfg",
+		efiImgPath, efiImgPath, efiImgPath, efiImgPath, efiImgPath, srcEfiMonolithic, efiImgPath, trampolinoPath,
+	)
+
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Creazione immagine EFI (efi.img)",
+		RunCommand: cmdEfiImg,
+	})
+
+	return actions, nil
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/coa-live-struct.go
+```go
+package engine
+
+import (
+	"fmt"
+	"path/filepath"
+)
+
+// GenerateLiveStruct ricrea fedelmente la logica del vecchio remaster_livestruct.c
+// Si aspetta i percorsi del kernel e dell'initrd già pronti (costruiti prima da coa)
+func generateLiveStruct(workDir string, sourceKernel string, sourceInitrd string) ([]Action, error) {
+	var actions []Action
+
+	// In penguins-eggs la cartella è SEMPRE "live", per tutte le distro!
+	liveDirPath := filepath.Join(workDir, "isodir", "live")
+
+	// 1. Azione: Creazione della struttura (mkdir -p /isodir/live)
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Creazione della struttura isodir/live",
+		RunCommand: fmt.Sprintf("mkdir -p %s", liveDirPath),
+	})
+
+	// 2. Azione: Copia del Kernel (vmlinuz)
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Copia del Kernel standardizzato in /live/vmlinuz",
+		RunCommand: fmt.Sprintf("cp %s %s/vmlinuz", sourceKernel, liveDirPath),
+	})
+
+	// 3. Azione: Copia dell'Initrd (initrd.img)
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       "Copia dell'Initrd standardizzato in /live/initrd.img",
+		RunCommand: fmt.Sprintf("cp %s %s/initrd.img", sourceInitrd, liveDirPath),
+	})
+
+	return actions, nil
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/coa-squashfs.go
+```go
+package engine
+
+import (
+	"fmt"
+	"path/filepath"
+)
+
+// generateSquashfs crea l'azione per comprimere la liveroot nel filesystem.squashfs
+func generateSquashfs(workPath string, compType string, excludeFile string) ([]Action, error) {
+	var actions []Action
+
+	// 1. Definiamo i percorsi esatti usando workPath
+	liveroot := filepath.Join(workPath, "liveroot")
+	squashDest := filepath.Join(workPath, "isodir", "live", "filesystem.squashfs")
+
+	// 2. Fallback per la compressione
+	if compType == "" {
+		compType = "xz"
+	}
+
+	// 3. Creazione del comando per mksquashfs
+	// -ef usa il file delle esclusioni che abbiamo generato in remaster_plan.go
+	cmd := fmt.Sprintf(
+		"mksquashfs %s %s -comp %s -b 1M -noappend -wildcards -ef %s",
+		liveroot, squashDest, compType, excludeFile,
+	)
+
+	// 4. Aggiungiamo l'azione da passare al motore C
+	actions = append(actions, Action{
+		Command:    "oa_shell",
+		Info:       fmt.Sprintf("Compressione SquashFS (%s) - Questa operazione richiederà tempo...", compType),
+		RunCommand: cmd,
+	})
+
+	return actions, nil
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/coa-xorriso.go
+```go
+package engine
+
+import (
+	"fmt"
+	"path/filepath"
+	// "coa/src/utils" // Adatta l'import se BootloaderRoot è altrove
+)
+
+// GenerateIso crea l'azione per impacchettare isodir nella ISO finale
+func GenerateIso(workDir string, isoName string, volId string) ([]Action, error) {
+	var actions []Action
+
+	// 1. Definiamo i percorsi chiave
+	isodir := filepath.Join(workDir, "isodir")
+	isoDest := filepath.Join(workDir, isoName) // Es: /home/eggs/custom.iso
+
+	// Se il Volume ID è vuoto, diamo un default sensato (max 32 caratteri, no spazi strani)
+	if volId == "" {
+		volId = "PENGUINS_EGGS_LIVE"
+	}
+
+	// 2. Recuperiamo il file MBR ibrido dai bootloader scaricati.
+	// Questo file è vitale per far avviare la chiavetta USB sui vecchi BIOS.
+	mbrPath := filepath.Join(BootloaderRoot, "isolinux/isohdpfx.bin")
+
+	// 3. Costruzione del "Mega Comando" xorriso
+	// -as mkisofs: usa la sintassi standard e compatibile
+	// -r -J -joliet-long: abilita i nomi di file lunghi (Windows/Linux compatibilità)
+	// -b: punta al bootloader BIOS
+	// -e: punta all'immagine UEFI FAT che abbiamo creato al passo precedente
+	// -isohybrid-*: rende la ISO scrivibile direttamente su USB con 'dd'
+	cmd := fmt.Sprintf(
+		"xorriso -as mkisofs -r -J -joliet-long -l -cache-inodes "+
+			"-V '%s' "+
+			"-isohybrid-mbr %s -partition_offset 16 "+
+			"-A '%s' "+
+			"-b isolinux/isolinux.bin -c isolinux/boot.cat "+
+			"-no-emul-boot -boot-load-size 4 -boot-info-table "+
+			"-eltorito-alt-boot "+
+			"-e boot/grub/efi.img -no-emul-boot -isohybrid-gpt-basdat "+
+			"-o %s %s",
+		volId, mbrPath, volId, isoDest, isodir,
+	)
+
+	// 4. Deleghiamo l'esecuzione della ISO cruda al motore C
+	actions = append(actions, Action{
+		Command:    "oa_shell", // Eseguito sull'host, non in chroot
+		Info:       fmt.Sprintf("Creazione della ISO finale: %s", isoName),
+		RunCommand: cmd,
+	})
+
+	return actions, nil
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/doc.go
+```go
+// Package engine implementa la logica operativa del "Mind" di coa.
+// Si occupa di orchestrare il processo di remastering, gestire i piani
+// di volo e comunicare con il motore nativo oa.
+package engine
+```
+
+### 📄 FILE: coa/src/internal/engine/exclude_list.go
+```go
+package engine
+
+import (
+	"os"
+	"strings"
+)
+
+// generateExcludeList crea il file .list dinamico per mksquashfs
+func generateExcludeList(mode string) string {
+	outPath := "/tmp/coa/excludes.list"
+	var excludes []string
+
+	excludes = append(excludes,
+		"boot/efi/EFI",
+		"boot/loader/entries/",
+		"etc/fstab",
+		"var/lib/docker/",
+	)
+
+	if mode != "clone" && mode != "crypted" {
+		excludes = append(excludes, "root/*")
+	}
+
+	userList := "/etc/coa/exclusion.list"
+	if _, err := os.Stat(userList); os.IsNotExist(err) {
+		userList = "conf/exclusion.list"
+	}
+
+	if data, err := os.ReadFile(userList); err == nil {
+		lines := strings.Split(string(data), "\n")
+		for _, line := range lines {
+			line = strings.TrimSpace(line)
+			if line != "" && !strings.HasPrefix(line, "#") {
+				excludes = append(excludes, line)
+			}
+		}
+	}
+
+	os.MkdirAll("/tmp/coa", 0755)
+	os.WriteFile(outPath, []byte(strings.Join(excludes, "\n")+"\n"), 0644)
+
+	return outPath
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/handle_adapt.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os/exec"
+)
+
+// HandleAdapt adatta la risoluzione del monitor per le Virtual Machine
+func HandleAdapt() {
+	fmt.Println("\033[1;33m[coa]\033[0m Adapting monitor resolution...")
+	virtualOutputs := []string{"Virtual-0", "Virtual-1", "Virtual-2", "Virtual-3"}
+	for _, output := range virtualOutputs {
+		cmd := exec.Command("xrandr", "--output", output, "--auto")
+		_ = cmd.Run() // Ignoriamo gli errori se l'output non esiste
+	}
+	fmt.Println("\033[1;32m[coa]\033[0m Resolution adapted.")
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/handle_detect.go
+```go
+package engine
+
+import (
+	"coa/src/internal/distro"
+	"fmt"
+)
+
+// HandleDetect mostra le informazioni rilevate sul sistema host
+func HandleDetect(d *distro.Distro) {
+	fmt.Println("\033[1;34m--- coa distro detect ---\033[0m")
+	fmt.Printf("Host Distro:     %s\n", d.DistroID)
+	fmt.Printf("Family:          %s\n", d.FamilyID)
+	fmt.Printf("DistroLike:      %s\n", d.DistroLike)
+	fmt.Printf("Codename:        %s\n", d.CodenameID)
+	fmt.Printf("Release:         %s\n", d.ReleaseID)
+	fmt.Printf("DistroUniqueID:  %s\n", d.DistroUniqueID)
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/handle_docs.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
+)
+
+// HandleDocs genera in automatico la wiki markdown, le man pages e gli script di autocompletamento.
+func HandleDocs(rootCmd *cobra.Command, targetDir string) error {
+	fmt.Printf("\033[1;34m[coa docs]\033[0m Generating project documentation in %s...\n", targetDir)
+
+	// 1. Definizione e creazione dei percorsi
+	mdPath := filepath.Join(targetDir, "md")
+	manPath := filepath.Join(targetDir, "man")
+	compPath := filepath.Join(targetDir, "completion")
+
+	if err := os.MkdirAll(mdPath, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(manPath, 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll(compPath, 0755); err != nil {
+		return err
+	}
+
+	// 2. Generazione Markdown
+	if err := doc.GenMarkdownTree(rootCmd, mdPath); err != nil {
+		return fmt.Errorf("markdown generation failed: %w", err)
+	}
+	fmt.Printf("\033[1;32m[+] Markdown Wiki generated in %s\033[0m\n", mdPath)
+
+	// 3. Generazione Man Pages
+	header := &doc.GenManHeader{
+		Title:   "COA",
+		Section: "1",
+		Source:  "penguins-eggs",
+		Manual:  "coa - The Artisan Orchestrator",
+	}
+	if err := doc.GenManTree(rootCmd, header, manPath); err != nil {
+		return fmt.Errorf("man pages generation failed: %w", err)
+	}
+	fmt.Printf("\033[1;32m[+] Man pages generated in %s\033[0m\n", manPath)
+
+	// 4. Generazione Autocompletion
+	rootCmd.GenBashCompletionFile(filepath.Join(compPath, "coa.bash"))
+	rootCmd.GenZshCompletionFile(filepath.Join(compPath, "coa.zsh"))
+	rootCmd.GenFishCompletionFile(filepath.Join(compPath, "coa.fish"), true)
+
+	fmt.Printf("\033[1;32m[+] Autocompletion scripts generated in %s\033[0m\n", compPath)
+
+	// Generiamo l'indice personalizzato
+	if err := generateCommandIndex(rootCmd, mdPath); err != nil {
+		return fmt.Errorf("failed to generate README index: %w", err)
+	}
+
+	fmt.Printf("\033[1;32m[+] README index generated in %s\033[0m\n", mdPath)
+	return nil
+}
+
+// generateCommandIndex crea un file README.md che funge da indice per la wiki
+func generateCommandIndex(rootCmd *cobra.Command, outputDir string) error {
+	var builder strings.Builder
+
+	builder.WriteString("# 🛠️ coa Command Reference\n\n")
+	builder.WriteString("Benvenuto nella guida ai comandi di **coa**. Qui trovi l'elenco completo delle funzionalità orchestrate dal motore.\n\n")
+
+	// Definiamo delle categorie per organizzare meglio il README
+	categories := map[string][]*cobra.Command{
+		"🚀 Core Actions":  {},
+		"📦 Export & Sync": {},
+		"⚙️ System Tools": {},
+	}
+
+	for _, cmd := range rootCmd.Commands() {
+		if cmd.Hidden {
+			continue
+		}
+
+		// Logica di smistamento nelle categorie
+		switch cmd.Name() {
+		case "remaster", "sysinstall": // Aggiornati i nomi qui
+			categories["🚀 Core Actions"] = append(categories["🚀 Core Actions"], cmd)
+		case "export":
+			categories["📦 Export & Sync"] = append(categories["📦 Export & Sync"], cmd)
+		default:
+			categories["⚙️ System Tools"] = append(categories["⚙️ System Tools"], cmd)
+		}
+	}
+
+	// Scriviamo le categorie nel file
+	for catName, cmds := range categories {
+		if len(cmds) == 0 {
+			continue
+		}
+		builder.WriteString(fmt.Sprintf("## %s\n\n", catName))
+		for _, cmd := range cmds {
+			// Il link punta al file generato da Cobra (es: coa_produce.md)
+			link := fmt.Sprintf("coa_%s.md", cmd.Name())
+			builder.WriteString(fmt.Sprintf("- [**%s**](%s) - %s\n", cmd.Name(), link, cmd.Short))
+		}
+		builder.WriteString("\n")
+	}
+
+	// Salviamo il file README.md nella cartella dei Markdown
+	indexPath := filepath.Join(outputDir, "README.md")
+	return os.WriteFile(indexPath, []byte(builder.String()), 0644)
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/handle_export.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+)
+
+const (
+	remoteUserHost = "root@192.168.1.2"
+	remoteIsoPath  = "/var/lib/vz/template/iso/"
+	remotePkgPath  = "/eggs/"
+	isoSrcDir      = "/home/eggs"
+)
+
+// HandleExportIso copia in remoto la ISO utilizzando SSH/SCP con Multiplexing
+func HandleExportIso(clean bool) {
+	allFiles, _ := filepath.Glob(filepath.Join(isoSrcDir, "egg-of_*.iso"))
+	if len(allFiles) == 0 {
+		fmt.Println("\033[1;31m[coa]\033[0m Nest is empty. No ISOs found in", isoSrcDir)
+		return
+	}
+
+	latestFiles := make(map[string]string)
+	re := regexp.MustCompile(`_\d{4}-\d{2}-\d{2}_\d{4}\.iso$`)
+
+	for _, path := range allFiles {
+		fileName := filepath.Base(path)
+		prefix := re.ReplaceAllString(fileName, "")
+
+		if info, err := os.Stat(path); err == nil {
+			if current, exists := latestFiles[prefix]; exists {
+				cInfo, _ := os.Stat(current)
+				if info.ModTime().After(cInfo.ModTime()) {
+					latestFiles[prefix] = path
+				}
+			} else {
+				latestFiles[prefix] = path
+			}
+		}
+	}
+
+	// SSH Multiplexing setup
+	socketPath := "/tmp/coa-ssh-mux"
+	muxArgs := []string{
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPath=" + socketPath,
+		"-o", "ControlPersist=2m",
+	}
+
+	defer func() {
+		exec.Command("ssh", "-O", "exit", "-o", "ControlPath="+socketPath, remoteUserHost).Run()
+		os.Remove(socketPath)
+	}()
+
+	for prefix, localPath := range latestFiles {
+		targetFileName := filepath.Base(localPath)
+		fmt.Printf("\n\033[1;35m[PROCESS]\033[0m Family: %s\n", prefix)
+
+		if clean {
+			fmt.Printf("\033[1;34m[CLEAN]\033[0m Removing old versions on Proxmox...\n")
+			rmCmdStr := fmt.Sprintf("rm -f %s%s*", remoteIsoPath, prefix)
+			sshArgs := append(muxArgs, remoteUserHost, rmCmdStr)
+			sshCmd := exec.Command("ssh", sshArgs...)
+			sshCmd.Stdout, sshCmd.Stderr, sshCmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+			if err := sshCmd.Run(); err != nil {
+				fmt.Printf("\033[1;33m[WARNING]\033[0m Remote cleanup failed or no old files found.\n")
+			} else {
+				fmt.Printf("\033[1;32m[CLEAN]\033[0m Old versions removed.\n")
+			}
+		}
+
+		fmt.Printf("\033[1;32m[COPY]\033[0m Sending %s to Proxmox...\n", targetFileName)
+		dstStr := fmt.Sprintf("%s:%s", remoteUserHost, remoteIsoPath)
+		scpArgs := append(muxArgs, localPath, dstStr)
+		scpCmd := exec.Command("scp", scpArgs...)
+		scpCmd.Stdout, scpCmd.Stderr, scpCmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+
+		if err := scpCmd.Run(); err != nil {
+			fmt.Printf("\033[1;31m[ERROR]\033[0m Copy failed: %v\n", err)
+		} else {
+			fmt.Printf("\033[1;32m[SUCCESS]\033[0m %s is now on Proxmox.\n", targetFileName)
+		}
+	}
+}
+
+// HandleExportPkg esporta i pacchetti nativi (DEB, Arch o RPM)
+func HandleExportPkg(clean bool) {
+	fmt.Println("\033[1;34m[PROCESS]\033[0m Searching for native packages...")
+
+	// 1. Cerchiamo i pacchetti generati (DEB, Arch e ora RPM)
+	debFiles, _ := filepath.Glob("oa-tools*.deb")
+	archFiles, _ := filepath.Glob("oa-tools*.pkg.tar.zst")
+	rpmFiles, _ := filepath.Glob("oa-tools*.rpm") // Aggiunta ricerca RPM
+
+	var allPackages []string
+	allPackages = append(allPackages, debFiles...)
+	allPackages = append(allPackages, archFiles...)
+	allPackages = append(allPackages, rpmFiles...) // Inclusione nel pool di invio
+
+	if len(allPackages) == 0 {
+		fmt.Println("\033[1;31m[ERROR]\033[0m No native packages found.")
+		return
+	}
+
+	// --- SETUP SSH MULTIPLEXING ---
+	socketPath := "/tmp/coa-ssh-mux-pkg"
+	muxArgs := []string{
+		"-o", "ControlMaster=auto",
+		"-o", "ControlPath=" + socketPath,
+		"-o", "ControlPersist=2m",
+	}
+
+	defer func() {
+		exec.Command("ssh", "-O", "exit", "-o", "ControlPath="+socketPath, remoteUserHost).Run()
+		os.Remove(socketPath)
+	}()
+
+	if clean {
+		fmt.Printf("\033[1;33m[CLEAN]\033[0m Removing old oa-tools packages on %s...\n", remoteUserHost)
+
+		// 2. Costruzione dinamica del target di pulizia
+		var rmTargets string
+		if len(debFiles) > 0 {
+			rmTargets += remotePkgPath + "oa-tools*.deb "
+		}
+		if len(archFiles) > 0 {
+			rmTargets += remotePkgPath + "oa-tools*.pkg.tar.zst "
+		}
+		if len(rpmFiles) > 0 {
+			rmTargets += remotePkgPath + "oa-tools*.rpm " // Aggiunta pulizia RPM
+		}
+
+		cleanCmdStr := "rm -f " + rmTargets
+		sshArgs := append(muxArgs, remoteUserHost, cleanCmdStr)
+
+		cleanCmd := exec.Command("ssh", sshArgs...)
+		cleanCmd.Stdout, cleanCmd.Stderr, cleanCmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+
+		if err := cleanCmd.Run(); err != nil {
+			fmt.Printf("\033[1;31m[ERROR]\033[0m Remote cleanup failed: %v\n", err)
+		} else {
+			fmt.Println("\033[1;32m[CLEAN]\033[0m Old packages removed.")
+		}
+	}
+
+	// 3. Invio di tutti i pacchetti trovati
+	for i, pkg := range allPackages {
+		fmt.Printf("\033[1;34m[COPY]\033[0m Sending \033[1m%s\033[0m to Proxmox...\n", pkg)
+
+		dstStr := fmt.Sprintf("%s:%s", remoteUserHost, remotePkgPath)
+		scpArgs := append(muxArgs, pkg, dstStr)
+
+		scpCmd := exec.Command("scp", scpArgs...)
+		if i == 0 {
+			scpCmd.Stdout, scpCmd.Stderr, scpCmd.Stdin = os.Stdout, os.Stderr, os.Stdin
+		} else {
+			scpCmd.Stdout, scpCmd.Stderr = os.Stdout, os.Stderr
+		}
+
+		if err := scpCmd.Run(); err != nil {
+			fmt.Printf("\033[1;31m[ERROR]\033[0m SCP transfer failed for %s: %v\n", pkg, err)
+		} else {
+			fmt.Printf("\033[1;32m[SUCCESS]\033[0m %s successfully exported to Proxmox.\n", pkg)
+		}
+	}
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/handle_kill.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+)
+
+// HandleKill gestisce la pulizia profonda invocando prima oa e poi rimuovendo la directory
+func HandleKill() {
+	fmt.Println("\033[1;33m[coa]\033[0m Freeing the nest...")
+	oaPath := getOaPath() // Questa funzione l'avevamo già messa in produce.go
+	cmd := exec.Command("sudo", oaPath, "cleanup")
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		fmt.Printf("\033[1;31m[coa]\033[0m Cleanup (unmount) failed: %v\n", err)
+	}
+
+	workPath := "/home/eggs"
+	fmt.Printf("\033[1;31m[coa]\033[0m Removing workspace: %s\n", workPath)
+	rmCmd := exec.Command("sudo", "rm", "-rf", workPath)
+	if err := rmCmd.Run(); err != nil {
+		fmt.Printf("\033[1;31m[coa]\033[0m Physical removal failed: %v\n", err)
+	} else {
+		fmt.Println("\033[1;32m[coa]\033[0m Nest is empty. System clean.")
+	}
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/install.go
+```go
+// Copyright 2026 Piero Proietti <piero.proietti@gmail.com>.
+// All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package engine
+
+import (
+	"fmt"
+	"strings"
+
+	"github.com/AlecAivazis/survey/v2"
+
+	"coa/src/internal/distro"
+)
+
+// KrillAnswers raccoglie i dati inseriti dall'utente nella TUI
+type KrillAnswers struct {
+	TargetDisk string
+	Hostname   string
+	Username   string
+	Password   string
+	UseLuks    bool
+}
+
+// HandleKrill avvia l'interfaccia interattiva
+func HandleKrill(d *distro.Distro) {
+	fmt.Println("\033[1;36m====================================================\033[0m")
+	fmt.Println("\033[1;36m       KRILL - The coa Universal Installer          \033[0m")
+	fmt.Println("\033[1;36m====================================================\033[0m")
+
+	disks := getAvailableDisks()
+	answers := &KrillAnswers{}
+
+	qs := []*survey.Question{
+		{
+			Name: "TargetDisk",
+			Prompt: &survey.Select{
+				Message: "Select the target disk for installation (WARNING: Will be wiped!):",
+				Options: disks,
+			},
+			Validate: survey.Required,
+		},
+		{
+			Name: "Hostname",
+			Prompt: &survey.Input{
+				Message: "Enter the new Hostname:",
+				Default: "coa-machine",
+			},
+			Validate: survey.Required,
+		},
+		{
+			Name: "Username",
+			Prompt: &survey.Input{
+				Message: "Enter the new login Username:",
+				Default: "artisan",
+			},
+			Validate: survey.Required,
+		},
+		{
+			Name: "Password",
+			Prompt: &survey.Password{
+				Message: "Enter User Password:",
+			},
+			Validate: survey.Required,
+		},
+		{
+			Name: "UseLuks",
+			Prompt: &survey.Confirm{
+				Message: "Do you want to encrypt the entire system with LUKS2?",
+				Default: false,
+			},
+		},
+	}
+
+	if err := survey.Ask(qs, answers); err != nil {
+		fmt.Printf("\033[1;31mInstallation aborted:\033[0m %v\n", err)
+		return
+	}
+
+	if answers.TargetDisk == "NO_SAFE_DISKS_FOUND" {
+		fmt.Println("\033[1;31mNo safe target disks available. Aborting.\033[0m")
+		return
+	}
+
+	targetClean := strings.Split(answers.TargetDisk, " ")[0]
+
+	fmt.Println("\n\033[1;33m--- Installation Summary ---\033[0m")
+	fmt.Printf("Disk:      \033[1;31m%s (Will be WIPED)\033[0m\n", targetClean)
+	fmt.Printf("Hostname:  %s\n", answers.Hostname)
+	fmt.Printf("Username:  %s\n", answers.Username)
+	fmt.Printf("LUKS:      %v\n", answers.UseLuks)
+
+	confirm := false
+	survey.AskOne(&survey.Confirm{
+		Message: "Are you absolutely sure you want to proceed? This is destructive.",
+		Default: false,
+	}, &confirm)
+
+	if !confirm {
+		fmt.Println("\033[1;32mInstallation canceled. Nest is safe.\033[0m")
+		return
+	}
+
+	generateInstallPlan(answers, targetClean, d)
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/install_plan.go
+```go
+// Copyright 2026 Piero Proietti <piero.proietti@gmail.com>.
+// All rights reserved.
+// Use of this source code is governed by a MIT-style
+// license that can be found in the LICENSE file.
+
+package engine
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+
+	"coa/src/internal/distro"
+)
+
+func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
+	fmt.Println("[krill] Compiling flight plan...")
+
+	squashPath := getSquashfsPath()
+	if squashPath == "" {
+		fmt.Printf("[ERROR] Could not locate pristine filesystem.squashfs!\n")
+		return
+	}
+
+	hashedPass := generateHashedPassword(ans.Password)
+
+	// 1. Inizializzazione del Piano di Volo
+	plan := FlightPlan{
+		PathLiveFs: "/mnt/krill-target",
+		Mode:       "install",
+		Plan:       []Action{},
+	}
+
+	// 2. PREPARAZIONE DISCO E FILESYSTEM
+	plan.Plan = append(plan.Plan, Action{
+		Command:    "oa_install_partition",
+		Info:       "Partitioning target disk",
+		RunCommand: disk,
+	})
+
+	// FIX PER FEDORA 43: Formattazione EXT4 con flag di compatibilità per GRUB
+	if d.FamilyID == "fedora" || d.FamilyID == "rhel" {
+		plan.Plan = append(plan.Plan, Action{
+			Command:    "oa_shell",
+			Info:       "Formatting partitions (legacy compatibility mode)",
+			RunCommand: fmt.Sprintf("mkfs.fat -F32 %s2 && mkfs.ext4 -O ^metadata_csum_seed,^orphan_file %s3", disk, disk),
+		})
+	} else {
+		plan.Plan = append(plan.Plan, Action{
+			Command:    "oa_install_format",
+			Info:       "Formatting target partitions",
+			RunCommand: disk,
+		})
+	}
+
+	plan.Plan = append(plan.Plan,
+		Action{
+			Command:    "oa_install_unpack",
+			Info:       "Unpacking system image to disk",
+			RunCommand: disk,
+			Args:       []string{squashPath},
+		},
+		Action{
+			Command:    "oa_install_prepare",
+			Info:       "Preparing target mountpoints",
+			RunCommand: disk,
+		},
+	)
+
+	// 3. LOGICA DISTRO-SPECIFICA (The Mind)
+	var shellInitrdCmd string
+	var shellGrubCmd string
+
+	switch d.FamilyID {
+	case "archlinux":
+		shellInitrdCmd = "mkinitcpio -P"
+		if isUEFI() {
+			shellGrubCmd = "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=coa --recheck && grub-mkconfig -o /boot/grub/grub.cfg"
+		} else {
+			shellGrubCmd = "grub-install --target=i386-pc --recheck " + disk + " && grub-mkconfig -o /boot/grub/grub.cfg"
+		}
+	case "fedora", "rhel", "centos", "rocky", "almalinux":
+		shellInitrdCmd = "dracut --force --regenerate-all"
+		if isUEFI() {
+			shellGrubCmd = "echo 'GRUB_ENABLE_BLSCFG=false' >> /etc/default/grub && " +
+				"grub2-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=fedora --recheck && " +
+				"grub2-mkconfig -o /boot/grub2/grub.cfg && " +
+				"cp /boot/grub2/grub.cfg /boot/efi/EFI/fedora/grub.cfg"
+		} else {
+			shellGrubCmd = "echo 'GRUB_ENABLE_BLSCFG=false' >> /etc/default/grub && " +
+				"grub2-install --target=i386-pc --recheck " + disk + " && " +
+				"grub2-mkconfig -o /boot/grub2/grub.cfg"
+		}
+	default: // Debian/Ubuntu
+		shellInitrdCmd = "update-initramfs -u -k all"
+		if isUEFI() {
+			shellGrubCmd = "grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=coa --recheck && update-grub"
+		} else {
+			shellGrubCmd = "grub-install --target=i386-pc --recheck " + disk + " && update-grub"
+		}
+	}
+
+	// 4. ESECUZIONE AZIONI UNIVERSALI E CHROOT
+	plan.Plan = append(plan.Plan,
+		Action{
+			Command:    "oa_install_fstab",
+			Info:       "Generating fstab configuration",
+			RunCommand: disk,
+		},
+		Action{
+			Command:    "oa_shell",
+			Info:       "Setting hostname and machine-id",
+			RunCommand: fmt.Sprintf("echo %s > /etc/hostname && systemd-machine-id-setup", ans.Hostname),
+			Chroot:     true,
+		},
+		Action{
+			Command:    "oa_shell",
+			Info:       "Regenerating Initramfs for target system",
+			RunCommand: shellInitrdCmd,
+			Chroot:     true,
+		},
+		Action{
+			Command:    "oa_shell",
+			Info:       "Installing and configuring GRUB",
+			RunCommand: shellGrubCmd,
+			Chroot:     true,
+		},
+		Action{
+			Command: "oa_install_users",
+			Info:    "Creating system users",
+		},
+	)
+
+	// 5. PULIZIA SELETTIVA E SYNC
+	if d.FamilyID == "debian" {
+		plan.Plan = append(plan.Plan, Action{
+			Command:    "oa_shell",
+			Info:       "Removing installer-specific artifacts",
+			RunCommand: "rm -rf /var/log/installer /var/lib/live/config /etc/sudoers.d/live-user 2>/dev/null",
+			Chroot:     true,
+		})
+	}
+
+	plan.Plan = append(plan.Plan,
+		Action{
+			Command:    "oa_shell",
+			Info:       "Syncing filesystems",
+			RunCommand: "sync",
+		},
+		Action{
+			Command: "oa_install_cleanup",
+			Info:    "Finalizing installation and unmounting",
+		},
+	)
+
+	// 6. Configurazione Utente Primario
+	plan.Users = []UserConfig{
+		{
+			Login:    ans.Username,
+			Password: hashedPass,
+			Gecos:    ans.Username + ",,,",
+			Home:     "/home/" + ans.Username,
+			Shell:    "/bin/bash",
+			Groups:   []string{"sudo", "wheel", "video", "audio", "plugdev", "netdev"},
+		},
+	}
+
+	// 7. Salvataggio ed Esecuzione
+	jsonData, _ := json.MarshalIndent(plan, "", "  ")
+	outPath := "/tmp/oa-plan.json"
+	os.WriteFile(outPath, jsonData, 0644)
+
+	fmt.Printf("[SUCCESS] Flight plan ready at %s\n", outPath)
+	executePlan(plan)
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/install_util.go
+```go
+package engine
+
+import (
+	"fmt"
+	"os"
+	"os/exec"
+	"strings"
+)
+
+// --- HELPER DI SISTEMA ---
+func isUEFI() bool {
+	if _, err := os.Stat("/sys/firmware/efi"); err == nil {
+		return true
+	}
+	return false
+}
+
+func getSquashfsPath() string {
+	paths := []string{
+		"/run/live/medium/live/filesystem.squashfs",       // Debian Live
+		"/lib/live/mount/medium/live/filesystem.squashfs", // Debian Alt
+		"/run/archiso/bootmnt/arch/x86_64/airootfs.sfs",   // Arch
+		"/run/initramfs/live/live/filesystem.squashfs",    // Fedora
+		"/home/eggs/iso/live/filesystem.squashfs",         // Local coa/oa
+	}
+
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			return p
+		}
+	}
+	return ""
+}
+
+func getRootDisk() string {
+	cmd := "lsblk -n -o PKNAME $(findmnt -n -v -o SOURCE /) | head -n 1"
+	out, err := exec.Command("sh", "-c", cmd).Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+func getAvailableDisks() []string {
+	rootDisk := getRootDisk()
+	out, _ := exec.Command("lsblk", "-d", "-n", "-o", "NAME,SIZE,MODEL").Output()
+	lines := strings.Split(strings.TrimSpace(string(out)), "\n")
+	var disks []string
+
+	for _, line := range lines {
+		parts := strings.Fields(line)
+		if len(parts) >= 2 {
+			diskName := parts[0]
+			if diskName == rootDisk ||
+				strings.HasPrefix(diskName, "loop") ||
+				strings.HasPrefix(diskName, "zram") ||
+				strings.HasPrefix(diskName, "sr") {
+				continue
+			}
+			diskStr := fmt.Sprintf("/dev/%s - %s %s", diskName, parts[1], strings.Join(parts[2:], " "))
+			disks = append(disks, diskStr)
+		}
+	}
+	if len(disks) == 0 {
+		disks = append(disks, "NO_SAFE_DISKS_FOUND")
+	}
+	return disks
+}
+
+func generateHashedPassword(plain string) string {
+	out, err := exec.Command("openssl", "passwd", "-6", plain).Output()
+	if err != nil {
+		return plain
+	}
+	return strings.TrimSpace(string(out))
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/naming.go
+```go
+package engine
+
+import (
+	"coa/src/internal/distro"
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+	"time"
+)
+
+// getIsoName genera il nome standard per l'immagine ISO finale
+// Segue il formato: egg-of_distro-version-hostname_arch_timestamp.iso
+func getIsoName(d *distro.Distro) string {
+	hostname, _ := os.Hostname()
+	timestamp := time.Now().Format("2006-01-02_1504")
+	arch := runtime.GOARCH //
+
+	var nameParts []string
+
+	// 1. Identificativo della distribuzione (es. Debian, Arch)
+	nameParts = append(nameParts, d.DistroID)
+
+	// 2. Versione: priorità al Codename (es. bookworm) o alla Release (es. 41)
+	if d.CodenameID != "" {
+		nameParts = append(nameParts, d.CodenameID)
+	} else if d.ReleaseID != "" {
+		nameParts = append(nameParts, d.ReleaseID)
+	}
+
+	// 3. Nome dell'host per identificare la macchina di origine
+	if hostname != "" {
+		nameParts = append(nameParts, hostname)
+	}
+
+	// Uniamo le parti per creare il tag identificativo
+	distroTag := strings.Join(nameParts, "-")
+
+	// Restituiamo il nome completo del file ISO
+	return fmt.Sprintf("egg-of_%s_%s_%s.iso", distroTag, arch, timestamp)
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/remaster.go
+```go
+package engine
+
+import (
+	"coa/src/internal/assets"
+	"coa/src/internal/distro"
+	"coa/src/internal/utils"
+	"encoding/json"
+	"fmt"
+	"io"
+	"log"
+	"os"
+	"os/exec"
+	"path/filepath"
+)
+
+// HandleRemaster gestisce la creazione della ISO
+func HandleRemaster(mode string, workPath string, d *distro.Distro) {
+	tempConfigPath := "/tmp/coa/configs"
+	fmt.Printf("\033[1;32m[coa]\033[0m Extracting internal configurations to %s...\n", tempConfigPath)
+
+	// TODO: Chiamerà assets.ExtractConfigs(tempConfigPath)
+	if err := assets.ExtractConfigs(tempConfigPath); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Asset extraction failed: %v", err)
+	}
+
+	fmt.Printf("\033[1;32m[coa]\033[0m Ensuring bootloaders are present...\n")
+
+	// Passiamo la costante BootloaderRoot definita in plan.go
+	if _, err := utils.EnsureBootloaders(BootloaderRoot); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Bootloader retrieval failed: %v", err)
+	}
+
+	fmt.Printf("\033[1;32m[coa]\033[0m Preparing environment...\n")
+
+	// La struttura Action e FlightPlan andrà definita in un file plan.go qui in engine
+	prePlan := FlightPlan{
+		PathLiveFs: workPath,
+		Mode:       mode,
+		Plan:       []Action{{Command: "oa_mount"}},
+	}
+	executePlan(prePlan)
+
+	if err := bridgeConfigs(d, workPath); err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Config bridging failed: %v", err)
+	}
+
+	fmt.Printf("\033[1;32m[coa]\033[0m Starting production flight...\n")
+
+	// TODO: Chiamerà generatePlan (da spostare in engine/plan.go)
+	flightPlan := generatePlan(d, mode, workPath)
+
+	if len(flightPlan.Plan) > 0 && flightPlan.Plan[0].Command == "action_prepare" {
+		flightPlan.Plan = flightPlan.Plan[1:]
+	}
+	executePlan(flightPlan)
+}
+
+// executePlan trasforma il piano in JSON e lo dà in pasto a oa
+func executePlan(plan FlightPlan) {
+	jsonData, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m JSON Error: %v", err)
+	}
+
+	tmpJSONPath := "oa-plan.json"
+	err = os.WriteFile(tmpJSONPath, jsonData, 0644)
+	if err != nil {
+		log.Fatalf("\033[1;31m[coa]\033[0m Temp file error: %v", err)
+	}
+	// defer os.Remove(tmpJSONPath)
+
+	oaPath := getOaPath()
+	cmd := exec.Command("sudo", oaPath, tmpJSONPath)
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		log.Fatalf("\n\033[1;31m[coa]\033[0m Engine error: %v", err)
+	}
+}
+
+// getOaPath cerca il braccio operativo (oa) nel sistema o nel percorso relativo
+func getOaPath() string {
+	path, err := exec.LookPath("oa")
+	if err == nil {
+		return path
+	}
+	if _, err := os.Stat("../oa/oa"); err == nil {
+		return "../oa/oa"
+	}
+	if _, err := os.Stat("./oa/oa"); err == nil {
+		return "./oa/oa"
+	}
+	return "oa"
+}
+
+// bridgeConfigs sovrascrive la configurazione mkinitcpio nella liveroot per Arch
+func bridgeConfigs(d *distro.Distro, workPath string) error {
+	if d.FamilyID != "archlinux" {
+		return nil
+	}
+
+	presetName := "live-arch.conf"
+	if d.DistroID == "manjaro" || d.DistroID == "biglinux" {
+		presetName = fmt.Sprintf("live-%s.conf", d.DistroID)
+	}
+	src := fmt.Sprintf("/tmp/coa/configs/mkinitcpio/%s", presetName)
+	dst := filepath.Join(workPath, "liveroot", "etc", "coa_mkinitcpio.conf")
+
+	fmt.Printf("\033[1;34m[coa]\033[0m Creating liveroot /etc/mkinitcpio.conf with %s...\n", presetName)
+
+	if err := copyFile(src, dst); err != nil {
+		return err
+	}
+	return os.Chmod(dst, 0644)
+}
+
+// copyFile utility per la copia fisica tra percorsi host
+func copyFile(src, dst string) error {
+	source, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer source.Close()
+
+	destination, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer destination.Close()
+
+	_, err = io.Copy(destination, source)
+	return err
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/remaster_plan.go
+```go
+package engine
+
+import (
+	"coa/src/internal/distro"
+	"coa/src/internal/pilot"
+	"fmt"
+	"path/filepath"
+)
+
+func generatePlan(d *distro.Distro, mode string, workPath string) FlightPlan {
+	// 0. Inizializzazione della base del Piano di Volo
+	plan := FlightPlan{
+		PathLiveFs:      workPath,
+		Mode:            mode,
+		Family:          d.FamilyID,
+		BootloadersPath: BootloaderRoot,
+	}
+
+	// =================================================================
+	// FASE 1: THE BRAIN (Operazioni Interne - Chroot)
+	// Modifichiamo il cuore del sistema (Utenti, Initramfs, Configurazioni)
+	// =================================================================
+	profile := pilot.GetBrainProfile(d, mode, workPath)
+
+	for _, t := range profile.Tasks {
+		for _, cmd := range t.Commands {
+			plan.Plan = append(plan.Plan, Action{
+				Command:    "oa_shell",
+				Info:       t.Description,
+				RunCommand: cmd,
+				Chroot:     t.Chroot,
+			})
+		}
+	}
+
+	// =================================================================
+	// FASE 2: LIVE STRUCT (Operazioni Esterne - Host)
+	// Copiamo il kernel e l'initrd (appena rigenerato!) nella ISO
+	// =================================================================
+
+	// NOTA: I percorsi di vmlinuz e initrd variano da distro a distro.
+	// Di solito in Debian/Ubuntu puntano ai symlink in root. Essendo eseguiti sull'host,
+	// dobbiamo puntare all'interno della liveroot.
+	kernelSrc := filepath.Join(workPath, "liveroot", "vmlinuz")
+	initrdSrc := filepath.Join(workPath, "liveroot", "initrd.img")
+
+	lsActions, err := generateLiveStruct(workPath, kernelSrc, initrdSrc)
+	if err != nil {
+		fmt.Printf("\033[1;33m[WARNING]\033[0m Impossibile generare LiveStruct: %v\n", err)
+	} else {
+		plan.Plan = append(plan.Plan, lsActions...)
+	}
+
+	// =================================================================
+	// FASE 3: BOOTLOADERS (Operazioni Esterne - Host)
+	// Iniettiamo GRUB, ISOLINUX e generiamo l'immagine EFI FAT32
+	// =================================================================
+	blActions, err := LiveBootloader(workPath)
+	if err != nil {
+		fmt.Printf("\033[1;33m[WARNING]\033[0m Impossibile configurare Bootloader: %v\n", err)
+	} else {
+		plan.Plan = append(plan.Plan, blActions...)
+	}
+
+	// =================================================================
+	// FASE 4: SQUASHFS (Il Congelamento)
+	// Chiudiamo il filesystem modificato in un blocco compresso
+	// =================================================================
+	excludeFilePath := generateExcludeList(mode)
+	sqActions, err := GenerateSquash(workPath, "xz", excludeFilePath)
+	if err != nil {
+		fmt.Printf("\033[1;31m[ERRORE]\033[0m Generazione SquashFS fallita: %v\n", err)
+	} else {
+		plan.Plan = append(plan.Plan, sqActions...)
+	}
+
+	// =================================================================
+	// FASE 5: XORRISO (Il Confezionamento)
+	// Creiamo la ISO Ibrida avviabile da USB e CD
+	// =================================================================
+	isoName := getIsoName(d)
+	isoActions, err := GenerateIso(workPath, isoName, "OA_LIVE")
+	if err != nil {
+		fmt.Printf("\033[1;31m[ERRORE]\033[0m Generazione ISO fallita: %v\n", err)
+	} else {
+		plan.Plan = append(plan.Plan, isoActions...)
+	}
+
+	// =================================================================
+	// FASE 6: CLEANUP (Il Demolitore)
+	// =================================================================
+	plan.Plan = append(plan.Plan, Action{
+		Command: "oa_remaster_cleanup",
+		Info:    "Smontaggio filesystem virtuali e pulizia finale",
+	})
+
+	return plan
+}
+```
+
+### 📄 FILE: coa/src/internal/engine/types.go
+```go
+package engine
+
+// BootloaderRoot definisce dove vengono estratti i bootloader. [cite: 88]
+const BootloaderRoot = "/tmp/coa/bootloaders"
+
+// Action rappresenta un singolo blocco "command" nell'array "plan" [cite: 89]
+type Action struct {
+	Command         string   `json:"command"`
+	Info            string   `json:"info,omitempty"` // <-- Aggiunto per l'output a video
+	VolID           string   `json:"volid,omitempty"`
+	OutputISO       string   `json:"output_iso,omitempty"`
+	CryptedPassword string   `json:"crypted_password,omitempty"`
+	RunCommand      string   `json:"run_command,omitempty"`
+	Chroot          bool     `json:"chroot,omitempty"` // Supporto per esecuzione in liveroot
+	ExcludeList     string   `json:"exclude_list,omitempty"`
+	BootParams      string   `json:"boot_params,omitempty"` // Parametri dinamici per il bootloader [cite: 89]
+	Args            []string `json:"args,omitempty"`
+}
+
+// UserConfig definisce la struttura per la creazione nativa dell'utente live [cite: 89]
+type UserConfig struct {
+	Login    string   `json:"login"`
+	Password string   `json:"password"`
+	Gecos    string   `json:"gecos"`
+	Home     string   `json:"home"`
+	Shell    string   `json:"shell"`
+	Groups   []string `json:"groups"`
+}
+
+// FlightPlan è l'oggetto JSON principale inviato al motore oa [cite: 90]
+type FlightPlan struct {
+	PathLiveFs      string       `json:"pathLiveFs"`
+	Mode            string       `json:"mode"`
+	Family          string       `json:"family"`
+	InitrdCmd       string       `json:"initrd_cmd"`
+	BootloadersPath string       `json:"bootloaders_path"`
+	Users           []UserConfig `json:"users"`
+	Plan            []Action     `json:"plan"`
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/boot.go
+```go
+// src/internal/pilot/boot.go
+
+package pilot
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+func GenerateBootConfig(familyID string, profile *BrainProfile) error {
+	tmpDir := "/tmp/coa"
+	targetFile := filepath.Join(tmpDir, "grub.cfg.final")
+	os.MkdirAll(tmpDir, 0755)
+
+	// 1. DEFAULT (Debian Style)
+	bootParams := "boot=live components"
+	kernelPath := "/live/vmlinuz"
+	initrdPath := "/live/initrd.img"
+
+	// 2. ADATTAMENTO PER ARCH
+	if familyID == "archlinux" {
+		bootParams = "archisobasedir=arch archisolabel=OA_LIVE rw"
+	}
+
+	// 3. SOVRASCRITTURA DA YAML (Se presente nel Brain)
+	for _, t := range profile.Tasks {
+		if t.Name == "boot" && len(t.Commands) > 0 {
+			bootParams = t.Commands[0]
+		}
+	}
+
+	// 4. COSTRUZIONE DEL TEMPLATE
+	grubContent := fmt.Sprintf(`
+set timeout=5
+set default=0
+
+# Ricerca della partizione tramite Label per evitare il rescue
+search --no-floppy --set=root --label OA_LIVE
+
+menuentry "coa Live (%s)" {
+    linux %s %s
+    initrd %s
+}
+
+menuentry "coa Live (%s) - RAM mode" {
+    linux %s %s toram
+    initrd %s
+}
+`, familyID, kernelPath, bootParams, initrdPath, familyID, kernelPath, bootParams, initrdPath)
+
+	return os.WriteFile(targetFile, []byte(strings.TrimSpace(grubContent)), 0644)
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/get_brain_profile.go
+```go
+package pilot
+
+import (
+	"coa/src/internal/distro"
+	"fmt"
+)
+
+func GetBrainProfile(d *distro.Distro, mode string, workPath string) *BrainProfile {
+	profile := &BrainProfile{Tasks: []Task{}}
+
+	// 1. AREA IDENTITY (Chiamata singola e pulita)
+	if idTask, err := createIdentityTask(d, mode); err == nil && idTask != nil {
+		profile.Tasks = append(profile.Tasks, *idTask)
+	}
+
+	// 2. AREA INITRD
+	if iniTask, err := createInitrdTask(d); err == nil && iniTask != nil {
+		profile.Tasks = append(profile.Tasks, *iniTask)
+	}
+
+	// 3. AREA BOOT (Solo per i parametri, niente comandi shell qui)
+	var bootCfg BootConfig
+	if err := readAreaConfig(d.FamilyID, "boot", &bootCfg); err == nil {
+		profile.Tasks = append(profile.Tasks, Task{
+			Name:        "boot",
+			Description: "Kernel boot parameters",
+			// Lasciamo Commands vuoto per evitare l'errore 'run_command mancante'
+		})
+	}
+
+	// 4, In GetBrainProfile
+	if layTask, err := createLayoutTask(d, workPath); err == nil {
+		profile.Tasks = append(profile.Tasks, *layTask)
+	}
+
+	return profile
+}
+
+func createIdentityTask(d *distro.Distro, mode string) (*Task, error) {
+	var cfg IdentityConfig
+	if err := readAreaConfig(d.FamilyID, "identity", &cfg); err != nil {
+		return nil, err
+	}
+
+	task := &Task{
+		Name:        "identity",
+		Description: "Artisan identity injection (passwd/shadow)",
+		Files:       make(map[string]string),
+		Commands:    []string{},
+		Chroot:      true,
+	}
+
+	// 1. PULIZIA (Purge): Se non siamo in clone, puliamo gli utenti dell'host
+	if mode != "clone" && mode != "crypted" {
+		purgeCmd := "awk -F: '$3 < 1000 || $3 > 59999' /etc/passwd > /tmp/p && mv /tmp/p /etc/passwd && " +
+			"awk -F: '$3 < 1000 || $3 > 59999' /etc/group > /tmp/g && mv /tmp/g /etc/group"
+		task.Commands = append(task.Commands, purgeCmd)
+	}
+
+	// 2. INIEZIONE: Creiamo l'utente live (esempio semplificato per un utente)
+	// In futuro potrai iterare su una lista di utenti dal profilo
+	login := "live"
+	uid, gid := 1000, 1000
+	gecos := "live,,,"
+	home := "/home/live"
+	shell := "/bin/bash"
+	passwordHash := "$6$wM.wY0QtatvbQMHZ$QtIKXSpIsp2Sk57.Ny.JHk7hWDu.lxPtUYaTOiBnP4WBG5KS6JpUlpXj2kcSaaMje7fr01uiGmxZhE8kfZRqv."
+
+	passwdLine := fmt.Sprintf("%s:x:%d:%d:%s:%s:%s", login, uid, gid, gecos, home, shell)
+	shadowLine := fmt.Sprintf("%s:%s:19000:0:99999:7:::", login, passwordHash)
+
+	injectCmd := fmt.Sprintf("echo '%s' >> /etc/passwd && echo '%s' >> /etc/shadow", passwdLine, shadowLine)
+	task.Commands = append(task.Commands, injectCmd)
+
+	// 3. HOME & SKEL: La tua logica C tradotta in shell
+	homeCmd := fmt.Sprintf("mkdir -p %s && cp -a /etc/skel/. %s/ 2>/dev/null || true && chown -R %d:%d %s",
+		home, home, uid, gid, home)
+	task.Commands = append(task.Commands, homeCmd)
+
+	return task, nil
+}
+
+// createInitrdTask è una funzione interna (minuscola) che costruisce il Task specifico.
+func createInitrdTask(d *distro.Distro) (*Task, error) {
+	var cfg InitrdConfig
+
+	// Carica il file (es. debian/initrd.yaml)
+	if err := readAreaConfig(d.FamilyID, "initrd", &cfg); err != nil {
+		return nil, err
+	}
+
+	task := &Task{
+		Name:        "initrd",
+		Description: fmt.Sprintf("Regenerating initramfs for %s", d.FamilyID),
+		Files:       make(map[string]string),
+		Commands:    []string{},
+		Chroot:      true,
+	}
+
+	// Ora carichiamo i dati direttamente (niente più .Initrd.Live o wrapper)
+	for path, content := range cfg.Files {
+		task.Files[path] = content
+	}
+
+	if cfg.Command != "" {
+		task.Commands = append(task.Commands, cfg.Command)
+	}
+
+	return task, nil
+}
+
+func createLayoutTask(d *distro.Distro, workPath string) (*Task, error) {
+	var cfg LayoutConfig
+	if err := readAreaConfig(d.FamilyID, "layout", &cfg); err != nil {
+		return nil, err
+	}
+
+	task := &Task{
+		Name:        "layout",
+		Description: "Creating ISO layout symlinks",
+		Commands:    []string{},
+		Chroot:      false, // Lavoriamo sui file della ISO
+	}
+
+	for dst, src := range cfg.Links {
+		// Ricostruiamo il comando che avevi nell'engine
+		linkCmd := fmt.Sprintf("mkdir -p $(dirname %s/iso/%s) && ln -sf %s %s/iso/%s",
+			workPath, dst, src, workPath, dst)
+		task.Commands = append(task.Commands, linkCmd)
+	}
+
+	return task, nil
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/_pilot.go
+```go
+package pilot
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+
+	"sigs.k8s.io/yaml"
+)
+
+// --- DEFINIZIONE DELLE STRUTTURE (Le aree che mancavano) ---
+type RemasterConfig struct {
+	BootParams string            `json:"boot_params"`
+	IsoLinks   map[string]string `json:"iso_links,omitempty"`
+	AdminGroup string            `json:"admin_group"`
+	UserGroups []string          `json:"user_groups"`
+}
+
+type InitrdTask struct {
+	Command    string
+	SetupFiles map[string]string
+	Remaster   RemasterConfig
+}
+
+// Struttura interna per mappare l'unione dei file YAML
+type brainInternal struct {
+	Initrd struct {
+		Live interface{} `json:"live"`
+	} `json:"initrd"`
+	Identity struct {
+		AdminGroup string   `json:"admin_group"`
+		UserGroups []string `json:"user_groups"`
+	} `json:"identity"`
+	Boot struct {
+		Params string `json:"params"`
+	} `json:"boot"`
+	Layout struct {
+		Links map[string]string `json:"links"`
+	} `json:"layout"`
+}
+
+// --- LOGICA DEL PILOTA ---
+
+func GetInitrdTask(familyID string) *InitrdTask {
+	basePath := findBrainDir()
+	if basePath == "" {
+		return nil
+	}
+
+	mappingData, err := os.ReadFile(filepath.Join(basePath, "distro.yaml"))
+	if err != nil {
+		return nil
+	}
+
+	var mapping struct {
+		Families map[string]string `yaml:"families"`
+	}
+	yaml.Unmarshal(mappingData, &mapping)
+
+	folderName := mapping.Families[familyID]
+	if folderName == "" {
+		folderName = familyID + ".d"
+	}
+
+	familyPath := filepath.Join(basePath, folderName)
+
+	var bi brainInternal
+	files, _ := filepath.Glob(filepath.Join(familyPath, "*.yaml"))
+
+	for _, file := range files {
+		data, err := os.ReadFile(file)
+		if err != nil {
+			continue
+		}
+		// IMPORTANTE: Controlliamo se lo YAML è valido
+		if err := yaml.Unmarshal(data, &bi); err != nil {
+			fmt.Printf("[PILOT ERROR] Failed to parse %s: %v\n", file, err)
+			continue
+		}
+	}
+
+	task := &InitrdTask{
+		SetupFiles: make(map[string]string),
+		Remaster: RemasterConfig{
+			BootParams: bi.Boot.Params,
+			IsoLinks:   bi.Layout.Links,
+			AdminGroup: bi.Identity.AdminGroup,
+			UserGroups: bi.Identity.UserGroups,
+		},
+	}
+
+	parseInitrd(bi.Initrd.Live, task)
+	return task
+}
+
+// --- FUNZIONI DI SUPPORTO ---
+
+func findBrainDir() string {
+	paths := []string{"coa/conf/brain.d", "conf/brain.d", "/etc/coa/brain.d", "brain.d"}
+	for _, p := range paths {
+		if info, err := os.Stat(p); err == nil && info.IsDir() {
+			return p
+		}
+	}
+	return ""
+}
+
+func parseInitrd(live interface{}, task *InitrdTask) {
+	if cmd, ok := live.(string); ok {
+		task.Command = cmd
+		return
+	}
+	if m, ok := live.(map[string]interface{}); ok {
+		if cmd, ok := m["command"].(string); ok {
+			task.Command = cmd
+		}
+		if files, ok := m["setup_files"].(map[string]interface{}); ok {
+			for path, content := range files {
+				task.SetupFiles[path] = content.(string)
+			}
+		}
+	}
+}
+
+// RunBrainLint scansiona brain.d e aggiunge gli header mancanti
+func RunBrainLint() {
+	basePath := findBrainDir()
+	if basePath == "" {
+		fmt.Println("[ERRORE] Cartella brain.d non trovata nei percorsi standard.")
+		return
+	}
+
+	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Saltiamo le directory e i file che non sono YAML (o il file delle mappature)
+		if info.IsDir() || filepath.Ext(path) != ".yaml" || filepath.Base(path) == "distro.yaml" {
+			return nil
+		}
+
+		// 1. Estrazione metadati dal percorso
+		// relPath sarà qualcosa come "archlinux.d/initrd.yaml"
+		relPath, _ := filepath.Rel(basePath, path)
+		dirName := filepath.Dir(relPath)
+		fileName := filepath.Base(relPath)
+
+		family := strings.TrimSuffix(dirName, ".d")
+		area := strings.TrimSuffix(fileName, ".yaml")
+
+		fmt.Printf("[LINT] Controllo unità: %s/%s\n", family, area)
+
+		// 2. Lettura e verifica dell'header
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("impossibile leggere %s: %v", path, err)
+		}
+
+		strContent := string(content)
+
+		// Cerchiamo il marcatore unico di coa
+		if !strings.Contains(strContent, "[ coa brain unit ]") {
+			// Costruzione del "cappello"
+			header := "# [ coa brain unit ]\n"
+			header += fmt.Sprintf("# family: %s\n", family)
+			header += fmt.Sprintf("# area:   %s\n", area)
+			header += "# --------------------------------------------------\n\n"
+
+			// Uniamo l'header al contenuto originale (pulendo spazi bianchi extra in cima)
+			newContent := header + strings.TrimSpace(strContent) + "\n"
+
+			// 3. Scrittura del file "vestito"
+			err = os.WriteFile(path, []byte(newContent), 0644)
+			if err != nil {
+				fmt.Printf("  └─ [ERRORE] Scrittura fallita: %v\n", err)
+			} else {
+				fmt.Println("  └─ Cappello aggiunto con successo!")
+			}
+		} else {
+			fmt.Println("  └─ Unità già configurata correttamente.")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Printf("[ERRORE] Durante il lint del cervello: %v\n", err)
+	} else {
+		fmt.Println("\n[SUCCESSO] Il Cervello è ora ordinato e riconoscibile.")
+	}
+}
+
+// GenerateBootConfig crea il file grub.cfg basandosi sui dati del brain
+func GenerateBootConfig(familyID string, task *InitrdTask) error {
+	label := "OA_LIVE" // Potrebbe essere dinamico in futuro
+	params := task.Remaster.BootParams
+
+	// percorsi di kernel/initrd
+	kernelPath := "/live/vmlinuz"
+	initrdPath := "/live/initrd.img"
+
+	// Template GRUB
+	content := fmt.Sprintf(`search --no-floppy --set=root --label %s
+set default="0"
+set timeout=10
+
+menuentry "oa Live System (%s)" {
+    echo "Loading kernel..."
+    linux %s %s
+    echo "Loading initial ramdisk..."
+    initrd %s
+}
+`, label, familyID, kernelPath, params, initrdPath)
+
+	// Assicuriamoci che la cartella temporanea esista
+	os.MkdirAll("/tmp/coa", 0755)
+	return os.WriteFile("/tmp/coa/grub.cfg.final", []byte(content), 0644)
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/pilot.go
+```go
+package pilot
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+
+	"gopkg.in/yaml.v3"
+)
+
+// src/internal/pilot/pilot.go
+func findBrainDir() string {
+	// Otteniamo la directory corrente (CWD)
+	cwd, _ := os.Getwd()
+	// Otteniamo la directory dove risiede l'eseguibile
+	exePath, _ := os.Executable()
+	baseDir := filepath.Dir(exePath)
+
+	// Lista dei sospettati (dove potrebbe nascondersi il cervello)
+	paths := []string{
+		// 1. Percorso specifico indicato da te (relativo alla root del progetto)
+		filepath.Join(cwd, "coa/conf/brain.d"),
+		filepath.Join(baseDir, "conf/brain.d"),
+
+		// 2. Percorsi standard (per sicurezza)
+		filepath.Join(cwd, "brain.d"),
+		filepath.Join(baseDir, "brain.d"),
+		filepath.Join(baseDir, "..", "brain.d"),
+
+		// 3. Percorsi di sistema
+		"/usr/share/coa/brain.d",
+		"/etc/coa/brain.d",
+	}
+
+	for _, p := range paths {
+		if _, err := os.Stat(p); err == nil {
+			// Se troviamo la cartella, restituiamo il percorso assoluto
+			absPath, _ := filepath.Abs(p)
+			return absPath
+		}
+	}
+
+	return ""
+}
+
+// getFamilyPath risolve la mappatura da familyID (es. "debian") alla cartella (es. "debian.d").
+func getFamilyPath(familyID string) (string, error) {
+	basePath := findBrainDir()
+	if basePath == "" {
+		return "", fmt.Errorf("brain directory not found")
+	}
+
+	mappingData, err := os.ReadFile(filepath.Join(basePath, "distro.yaml"))
+	if err != nil {
+		return "", err
+	}
+
+	var mapping struct {
+		Families map[string]string `yaml:"families"`
+	}
+	if err := yaml.Unmarshal(mappingData, &mapping); err != nil {
+		return "", err
+	}
+
+	folderName := mapping.Families[familyID]
+	if folderName == "" {
+		folderName = familyID + ".d"
+	}
+
+	return filepath.Join(basePath, folderName), nil
+}
+
+// readAreaConfig legge un file specifico (es. identity.yaml) e lo parsa nella struct fornita.
+func readAreaConfig(familyID string, area string, out interface{}) error {
+	familyPath, err := getFamilyPath(familyID)
+	if err != nil {
+		return err
+	}
+
+	fullPath := filepath.Join(familyPath, area+".yaml")
+	data, err := os.ReadFile(fullPath)
+	if err != nil {
+		return err
+	}
+
+	return yaml.Unmarshal(data, out)
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/run_brain_lint.go
+```go
+package pilot
+
+import (
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
+// RunBrainLint scansiona brain.d e aggiunge gli header mancanti
+func RunBrainLint() {
+	basePath := findBrainDir()
+	if basePath == "" {
+		fmt.Println("[ERRORE] Cartella brain.d non trovata nei percorsi standard.")
+		return
+	}
+
+	err := filepath.Walk(basePath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Saltiamo le directory e i file che non sono YAML (o il file delle mappature)
+		if info.IsDir() || filepath.Ext(path) != ".yaml" || filepath.Base(path) == "distro.yaml" {
+			return nil
+		}
+
+		// 1. Estrazione metadati dal percorso
+		// relPath sarà qualcosa come "archlinux.d/initrd.yaml"
+		relPath, _ := filepath.Rel(basePath, path)
+		dirName := filepath.Dir(relPath)
+		fileName := filepath.Base(relPath)
+
+		family := strings.TrimSuffix(dirName, ".d")
+		area := strings.TrimSuffix(fileName, ".yaml")
+
+		fmt.Printf("[LINT] Controllo unità: %s/%s\n", family, area)
+
+		// 2. Lettura e verifica dell'header
+		content, err := os.ReadFile(path)
+		if err != nil {
+			return fmt.Errorf("impossibile leggere %s: %v", path, err)
+		}
+
+		strContent := string(content)
+
+		// Cerchiamo il marcatore unico di coa
+		if !strings.Contains(strContent, "[ coa brain unit ]") {
+			// Costruzione del "cappello"
+			header := "# [ coa brain unit ]\n"
+			header += fmt.Sprintf("# family: %s\n", family)
+			header += fmt.Sprintf("# area:   %s\n", area)
+			header += "# --------------------------------------------------\n\n"
+
+			// Uniamo l'header al contenuto originale (pulendo spazi bianchi extra in cima)
+			newContent := header + strings.TrimSpace(strContent) + "\n"
+
+			// 3. Scrittura del file "vestito"
+			err = os.WriteFile(path, []byte(newContent), 0644)
+			if err != nil {
+				fmt.Printf("  └─ [ERRORE] Scrittura fallita: %v\n", err)
+			} else {
+				fmt.Println("  └─ Cappello aggiunto con successo!")
+			}
+		} else {
+			fmt.Println("  └─ Unità già configurata correttamente.")
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		fmt.Printf("[ERRORE] Durante il lint del cervello: %v\n", err)
+	} else {
+		fmt.Println("\n[SUCCESSO] Il Cervello è ora ordinato e riconoscibile.")
+	}
+}
+```
+
+### 📄 FILE: coa/src/internal/pilot/types.go
+```go
+package pilot
+
+// Task rappresenta l'unità di lavoro che finirà nel piano di remaster
+type Task struct {
+	Name        string            `json:"Name"`
+	Files       map[string]string `json:"Files"`
+	Commands    []string          `json:"Commands"`
+	Chroot      bool              `json:"Chroot"`
+	Description string            `json:"Description"`
+}
+
+type BrainProfile struct {
+	Tasks []Task
+}
+
+// Strutture di configurazione (mappano i file YAML piatti)
+
+type IdentityConfig struct {
+	AdminGroup string   `yaml:"admin_group"`
+	UserGroups []string `yaml:"user_groups"`
+}
+
+type InitrdConfig struct {
+	Command string            `yaml:"command"`
+	Files   map[string]string `yaml:"setup_files"` // Usa setup_files per tutti
+}
+
+type BootConfig struct {
+	Params string `yaml:"params"`
+}
+
+type LayoutConfig struct {
+	Links map[string]string `yaml:"links"`
+}
+```
+
+### 📄 FILE: coa/src/internal/utils/bootloader_fetcher.go
+```go
+package utils
+
+import (
+	"archive/tar"
+	"compress/gzip"
+	"fmt"
+	"io"
+	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
+	// ELIMINATO: "coa/src/internal/engine"
+)
+
+const BootloaderURL = "https://github.com/pieroproietti/penguins-bootloaders/releases/download/v26.1.16/bootloaders.tar.gz"
+
+// EnsureBootloaders ora riceve il percorso come argomento
+func EnsureBootloaders(targetDir string) (string, error) {
+	// 1. Controllo se esistono già
+	if _, err := os.Stat(targetDir); err == nil {
+		return targetDir, nil
+	}
+
+	fmt.Printf("\033[1;33m[coa]\033[0m Bootloaders non trovati in %s. Inizio download...\n", targetDir)
+
+	// 2. Download
+	resp, err := http.Get(BootloaderURL)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("errore download: status %d", resp.StatusCode)
+	}
+
+	// 3. Estrazione
+	if err := extractTarGz(resp.Body, targetDir); err != nil {
+		return "", err
+	}
+
+	return targetDir, nil
+}
+
+func extractTarGz(r io.Reader, dest string) error {
+	gzr, err := gzip.NewReader(r)
+	if err != nil {
+		return err
+	}
+	defer gzr.Close()
+
+	tr := tar.NewReader(gzr)
+	for {
+		header, err := tr.Next()
+		if err == io.EOF {
+			break
+		}
+		if err != nil {
+			return err
+		}
+
+		cleanPath := filepath.Clean(header.Name)
+		parts := strings.Split(cleanPath, string(filepath.Separator))
+
+		var relPath string
+		if len(parts) > 1 {
+			relPath = filepath.Join(parts[1:]...)
+		} else {
+			continue // Salta la cartella radice del tarball
+		}
+
+		target := filepath.Join(dest, relPath)
+
+		switch header.Typeflag {
+		case tar.TypeDir:
+			os.MkdirAll(target, 0755)
+		case tar.TypeReg:
+			os.MkdirAll(filepath.Dir(target), 0755)
+			f, _ := os.OpenFile(target, os.O_CREATE|os.O_RDWR, os.FileMode(header.Mode))
+			io.Copy(f, tr)
+			f.Close()
+		}
+	}
+	return nil
+}
+```
+
+### 📄 FILE: coa/src/middleware/hub.go
+```go
+package middleware
+
+import (
+	"coa/src/internal/distro"
+	"os"
+	"runtime"
+)
+
+type DiscoveryData struct {
+	DistroName   string
+	Family       string
+	Architecture string
+	IsRoot       bool
+}
+
+// src/middleware/hub.go
+func GetDiscovery() DiscoveryData {
+	d := distro.NewDistro()
+
+	return DiscoveryData{
+		// Cambia d.Distro in d.DistroID
+		DistroName: d.DistroID,
+		// Cambia d.Family in d.FamilyID
+		Family:       d.FamilyID,
+		Architecture: runtime.GOARCH,
+		IsRoot:       os.Geteuid() == 0,
+	}
+}
+```
+
+### 📄 FILE: coa/conf/derivatives.yaml
+```yaml
+# derivatives.yaml
+# Tracciamento delle derivate verso la loro origine (distroLike e codenameLike)
+
+# --- DEBIAN ---
+- distroLike: Debian
+  codenameLike: bookworm
+  family: debian
+  derivatives:
+    - kali-rolling
+    - faye
+    - orion-belt
+    - ara
+
+- distroLike: Debian
+  codenameLike: trixie
+  family: debian
+  derivatives:
+    - gigi
+    - lory
+    - echo
+    - orchid
+    - yirmibes
+
+# --- UBUNTU ---
+- distroLike: Ubuntu
+  codenameLike: noble
+  family: debian
+  derivatives:
+    - oracular
+    - plucky
+    - questing
+    - resolute
+    - wilma
+    - xia
+    - zara
+    - zena
+
+# --- FEDORA (Qui matchiamo direttamente il nome della distro) ---
+- distroLike: Fedora
+  codenameLike: rolling
+  family: fedora
+  derivatives:
+    - Almalinux
+    - Nobara
+    - Rocky
+    - Ultramarine
+
+# --- ARCH LINUX ---
+- distroLike: Arch
+  codenameLike: rolling
+  family: archlinux
+  derivatives:
+    - bluestarlinux
+    - zetar```
+
+````

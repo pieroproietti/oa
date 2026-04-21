@@ -1,7 +1,12 @@
 /*
  * oa: eggs in my dialect🥚🥚
  * remastering core - Environment Preparation
+ * 
+ * mount.c (L'Infrastruttura): 
+ * Sfrutta le syscall C (MS_BIND, MS_PRIVATE, overlay) per costruire il filesystem virtuale 
+ * (chroot/liveroot) in modo atomico, velocissimo e senza i rischi dei comandi testuali Bash.
  */
+
 #include "oa.h"
 #include <errno.h>
 #include <sys/mount.h>
@@ -37,7 +42,10 @@ static int fortified_bind_mount(const char *src, const char *tgt, unsigned long 
     return 0;
 }
 
-int remaster_prepare(OA_Context *ctx) {
+/**
+ * main
+ */
+int oa_mount(OA_Context *ctx) {
     cJSON *path_item = cJSON_GetObjectItemCaseSensitive(ctx->task, "pathLiveFs");
     if (!path_item) path_item = cJSON_GetObjectItemCaseSensitive(ctx->root, "pathLiveFs");
     cJSON *mode_item = cJSON_GetObjectItemCaseSensitive(ctx->task, "mode");

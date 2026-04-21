@@ -40,7 +40,7 @@ Actions are now semantically divided into three biological phases:
 * **Parameters**: `pathLiveFs` (String)
 * **Behavior**: Detects the host's running kernel and copies the corresponding `vmlinuz`.
 
-### `oa_remaster_prepare`
+### `oa_mount`
 **Purpose**: Initializes the Zero-Copy environment using OverlayFS and bind mounts.
 * **Parameters**: `pathLiveFs` (String), `mode` (String)
 * **Behavior**: Creates the `liveroot`, bind-mounts host data read-only, sets up OverlayFS for `/usr` and `/var`, and applies the `tmpfs` Anti-Recursion mask.
@@ -55,7 +55,7 @@ Actions are now semantically divided into three biological phases:
 * **Parameters**: `pathLiveFs` (String), `bootloaders_path` (String)
 * **Behavior**: Extracts EFI payloads and GRUB modules to `iso/EFI/BOOT`.
 
-### `oa_remaster_users`
+### `oa_oa_users`
 **Purpose**: Creates the Live user identity for the ISO.
 * **Parameters**: `pathLiveFs`, `users` (Array), `mode` (String)
 * **Behavior**: Purges host identities in standard mode, handcrafts the live user natively via C streams, and populates the home directory.

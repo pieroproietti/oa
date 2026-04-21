@@ -41,7 +41,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 	// FIX PER FEDORA 43: Formattazione EXT4 con flag di compatibilità per GRUB
 	if d.FamilyID == "fedora" || d.FamilyID == "rhel" {
 		plan.Plan = append(plan.Plan, Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Formatting partitions (legacy compatibility mode)",
 			RunCommand: fmt.Sprintf("mkfs.fat -F32 %s2 && mkfs.ext4 -O ^metadata_csum_seed,^orphan_file %s3", disk, disk),
 		})
@@ -108,19 +108,19 @@ func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 			RunCommand: disk,
 		},
 		Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Setting hostname and machine-id",
 			RunCommand: fmt.Sprintf("echo %s > /etc/hostname && systemd-machine-id-setup", ans.Hostname),
 			Chroot:     true,
 		},
 		Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Regenerating Initramfs for target system",
 			RunCommand: shellInitrdCmd,
 			Chroot:     true,
 		},
 		Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Installing and configuring GRUB",
 			RunCommand: shellGrubCmd,
 			Chroot:     true,
@@ -134,7 +134,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 	// 5. PULIZIA SELETTIVA E SYNC
 	if d.FamilyID == "debian" {
 		plan.Plan = append(plan.Plan, Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Removing installer-specific artifacts",
 			RunCommand: "rm -rf /var/log/installer /var/lib/live/config /etc/sudoers.d/live-user 2>/dev/null",
 			Chroot:     true,
@@ -143,7 +143,7 @@ func generateInstallPlan(ans *KrillAnswers, disk string, d *distro.Distro) {
 
 	plan.Plan = append(plan.Plan,
 		Action{
-			Command:    "oa_sys_shell",
+			Command:    "oa_shell",
 			Info:       "Syncing filesystems",
 			RunCommand: "sync",
 		},

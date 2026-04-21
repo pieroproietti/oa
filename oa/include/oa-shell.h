@@ -1,5 +1,5 @@
-#ifndef SYS_SHELL_H
-#define SYS_SHELL_H
+#ifndef OA_SHELL_H
+#define OA_SHELL_H
 
 #include "oa.h"
 
@@ -9,6 +9,6 @@
  * - "run_command": string (il comando da eseguire)
  * - "chroot": boolean (se true, esegue dentro liveroot)
  */
-int sys_shell(OA_Context *ctx);
+int oa_shell(OA_Context *ctx);
 
 #endif
