@@ -1,20 +1,19 @@
 /*
- * src/actions/oa_users.c
+ * src/actions/oa-shell.c
  * Remastering core: User & Group Identity artisan
  * oa: eggs in my dialect🥚🥚
- * 
- * shell.c (Il Passpartout): L'invenzione geniale. Il ponte perfetto tra il cervello (Go)
+ * * shell.c (Il Passpartout): L'invenzione geniale. Il ponte perfetto tra il cervello (Go)
  * e il sistema operativo. Usa fork, exec e waitpid in C per eseguire qualsiasi altra cosa
  * comandata da Go, garantendoti che il C sappia sempre se il comando ha avuto successo o
- * ha fallito
- * 
- * Author: Piero Proietti <piero.proietti@gmail.com>
+ * ha fallito.
+ * * Author: Piero Proietti <piero.proietti@gmail.com>
  * License: GPL-3.0-or-later
  */
 
 #include "oa.h"
 #include <sys/wait.h>
 #include <unistd.h>
+#include <string.h>
 
 /**
  * @brief Esegue un comando tramite shell con tracciamento nel log.
@@ -43,7 +42,19 @@ int oa_shell(OA_Context *ctx) {
         }
 
         char target_root[PATH_SAFE];
-        snprintf(target_root, sizeof(target_root), "%s/liveroot", path_obj->valuestring);
+        cJSON *mode_obj = cJSON_GetObjectItemCaseSensitive(ctx->root, "mode");
+
+        // Motore Bimodale:
+        // Se siamo in modalità "install", usiamo il percorso esatto (es. /tmp/coa/calamares-root)
+        // Altrimenti (remaster), manteniamo la logica classica con /liveroot.
+        if (cJSON_IsString(mode_obj) && strcmp(mode_obj->valuestring, "install") == 0) {
+            snprintf(target_root, sizeof(target_root), "%s", path_obj->valuestring);
+        } else {
+            snprintf(target_root, sizeof(target_root), "%s/liveroot", path_obj->valuestring);
+        }
+
+        // Stampiamo il path risolto nel log per sicurezza e debug futuro
+        LOG_INFO("Target chroot path resolved to: [%s]", target_root);
 
         pid_t pid = fork();
         if (pid == 0) { // Processo FIGLIO

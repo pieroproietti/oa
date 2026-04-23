@@ -10,6 +10,9 @@ import (
 //go:embed configs/*
 var internalConfigs embed.FS
 
+//go:embed calamares_base/*
+var calamaresFiles embed.FS // <-- AGGIUNTA PER CALAMARES
+
 // ExtractConfigs estrae le configurazioni incorporate nel binario verso una directory temporanea
 func ExtractConfigs(destRoot string) error {
 	fmt.Printf("[DEBUG] Tentativo di estrazione in: %s\n", destRoot)
@@ -27,6 +30,18 @@ func ExtractConfigs(destRoot string) error {
 	fmt.Printf("[DEBUG] Trovate %d entries nella cartella embed 'configs'\n", len(entries))
 
 	return fsCopy(internalConfigs, "configs", destRoot)
+}
+
+// ExtractCalamares estrae i file universali di Calamares usando la tua funzione fsCopy
+func ExtractCalamares(destRoot string) error {
+	fmt.Printf("[DEBUG] Estrazione asset Calamares in: %s\n", destRoot)
+
+	if err := os.MkdirAll(destRoot, 0755); err != nil {
+		return err
+	}
+
+	// Ricicliamo la tua fsCopy!
+	return fsCopy(calamaresFiles, "calamares_base", destRoot)
 }
 
 func fsCopy(fs embed.FS, src, dest string) error {

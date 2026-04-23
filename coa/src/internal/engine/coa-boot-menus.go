@@ -100,7 +100,7 @@ LABEL ram
 	// Trampolino EFI in /EFI/BOOT/grub.cfg (Fisso e strutturale)
 	efiTrampolinePath := filepath.Join(workPath, "isodir", "EFI", "BOOT", "grub.cfg")
 	os.MkdirAll(filepath.Dir(efiTrampolinePath), 0755)
-	os.WriteFile(efiTrampolinePath, []byte("search --set=root --file /boot/grub/grub.cfg\nconfigfile /boot/grub/grub.cfg\n"), 0644)
-
+	trampolino := "search --set=root --file /live/filesystem.squashfs\nset prefix=($root)/boot/grub\nconfigfile $prefix/grub.cfg\n"
+	os.WriteFile(efiTrampolinePath, []byte(trampolino), 0644)
 	return nil
 }

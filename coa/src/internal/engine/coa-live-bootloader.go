@@ -25,7 +25,7 @@ func LiveBootloader(workDir string) ([]Action, error) {
 	}
 
 	// 3. Il Trampolino GRUB nativo in Go
-	trampolino := "search --file --set=root /live/vmlinuz\n" +
+	trampolino := "search --file --set=root /live/filesystem.squashfs\n" +
 		"set prefix=($root)/boot/grub\n" +
 		"configfile $prefix/grub.cfg\n"
 
