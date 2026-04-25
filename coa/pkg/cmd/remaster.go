@@ -74,10 +74,11 @@ and generate a precise execution plan for the OA engine.`,
 			os.Exit(1)
 		}
 
-		// --- RECUPERO BOOTLOADERS ---
+		// RECUPERO BOOTLOADERS
 		LogCoala("Recupero bootloaders (penguins-bootloaders)...")
 		utils.EnsureBootloaders("/tmp/coa/bootloaders")
 
+		// GENERAZIONE EXCLUSIONI
 		LogCoala("Generazione lista di esclusione (%s mode)...", produceMode)
 		engine.GenerateExcludeList(produceMode)
 
