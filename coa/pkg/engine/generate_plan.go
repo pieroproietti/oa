@@ -4,9 +4,10 @@ import (
 	"coa/pkg/pilot" // Importiamo i tipi definiti nel pilota
 	"encoding/json"
 	"os"
+	"path/filepath"
 )
 
-func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, workPath string) error {
+func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, workPath string) (string, error) {
 	var plan OAPlan
 
 	// Definiamo l'utente classico "live/live"
@@ -68,8 +69,29 @@ func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, 
 	return savePlan(plan)
 }
 
-func savePlan(plan OAPlan) error {
-	os.MkdirAll("/tmp/coa", 0755)
-	file, _ := json.MarshalIndent(plan, "", "  ")
-	return os.WriteFile("oa-plan.json", file, 0644)
+// Aggiunto (string, error) alla firma
+func savePlan(plan OAPlan) (string, error) {
+	// Definiamo chiaramente dove andrà a finire
+	targetDir := "/tmp/coa"
+	targetFile := "oa-plan.json"
+	fullPath := filepath.Join(targetDir, targetFile)
+
+	// 1. Creiamo la directory e gestiamo l'errore
+	if err := os.MkdirAll(targetDir, 0755); err != nil {
+		return "", err
+	}
+
+	// 2. Marshalling del JSON
+	file, err := json.MarshalIndent(plan, "", "  ")
+	if err != nil {
+		return "", err // Gestiamo l'errore se il JSON è malformato
+	}
+
+	// 3. Scrittura del file nel percorso ASSOLUTO
+	if err := os.WriteFile(fullPath, file, 0644); err != nil {
+		return "", err
+	}
+
+	// 4. Se tutto è andato bene, restituiamo il percorso e nessun errore
+	return fullPath, nil
 }

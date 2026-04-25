@@ -68,7 +68,7 @@ and generate a precise execution plan for the OA engine.`,
 		LogSuccess("Spartito caricato con successo.")
 
 		// 3. ENGINE: Generiamo il piano JSON per oa
-		err = engine.GeneratePlan(profile.Remaster, myDistro.FamilyID, true, producePath)
+		planPath, err := engine.GeneratePlan(profile.Remaster, myDistro.FamilyID, true, producePath)
 		if err != nil {
 			LogError("Impossibile generare il piano di volo: %v", err)
 			os.Exit(1)
@@ -83,7 +83,7 @@ and generate a precise execution plan for the OA engine.`,
 
 		// 4. DECOLLO: Eseguiamo il motore C (oa) passandogli il JSON appena generato
 		LogCoala("Passaggio dei comandi al motore OA...")
-		oaCmd := exec.Command("oa", "oa-plan.json")
+		oaCmd := exec.Command("oa", planPath)
 
 		// Colleghiamo l'output di oa direttamente al terminale dell'utente
 		oaCmd.Stdout = os.Stdout
