@@ -10,11 +10,11 @@ import (
 func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, workPath string) (string, error) {
 	var plan OAPlan
 
-	// Definiamo l'utente classico "live/live"
+	// Definiamo l'utente classico "live/evolution"
 	// In futuro questo verrà da pilot.LoadConfig()
 	defaultUser := pilot.User{
 		Login:    "live",
-		Password: "$6$rounds=4096$salt$UQ7.P... (hash di 'live')",
+		Password: "$6$oa-tools$uTKAYeAVn.Y.Dy2To6HXsHt1Gt4HpMghmOV93a46jFY7hkAQ3tk7eRTKjcvSYDf5sOf3qnKzyyPYXurKp9ST3.", // evolution
 		Home:     "/home/live",
 		Shell:    "/bin/bash",
 		Groups:   []string{"sudo", "audio", "video", "cdrom", "plugdev", "netdev"},
