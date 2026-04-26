@@ -134,7 +134,8 @@ remaster:
   - name: "coa-xorriso"
     description: "Creazione della ISO finale con xorriso"
     command: "oa_shell"
-    run_command: "xorriso -as mkisofs -r -J -joliet-long -l -cache-inodes -V 'OA_LIVE' -isohybrid-mbr /tmp/coa/bootloaders/ISOLINUX/isohdpfx.bin -partition_offset 16 -A 'OA_LIVE' -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/efi.img -no-emul-boot -isohybrid-gpt-basdat -o /home/eggs/egg-of_final.iso /home/eggs/isodir"
+    run_command: "xorriso -as mkisofs -J -joliet-long -r -l -cache-inodes -V 'OA_LIVE' -isohybrid-mbr /tmp/coa/bootloaders/ISOLINUX/isohdpfx.bin -partition_offset 16 -A 'OA_LIVE' -b isolinux/isolinux.bin -c isolinux/boot.cat -no-emul-boot -boot-load-size 4 -boot-info-table -eltorito-alt-boot -e EFI/BOOT/efi.img -no-emul-boot -isohybrid-gpt-basdat -o /home/eggs/egg-of_final.iso /home/eggs/isodir"
+
 
   - name: "coa-cleanup"
     description: "Smontaggio e pulizia finale (Smart Umount)"
