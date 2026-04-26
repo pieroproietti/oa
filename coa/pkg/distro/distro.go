@@ -9,7 +9,9 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/yaml"
 )
@@ -22,6 +24,7 @@ type Distro struct {
 	FamilyID       string
 	DistroLike     string
 	DistroUniqueID string
+	Arch           string
 }
 
 // DerivativeMapping mappa la struttura del file YAML
@@ -141,4 +144,19 @@ func NewDistro() *Distro {
 	fmt.Printf("\033[1;31m[coa]\033[0m Distro sconosciuta (%s/%s). Aggiungila a derivatives.yaml!\n", rawID, rawCodename)
 	os.Exit(1)
 	return nil
+}
+
+// GetISOName genera il nome standard: egg-of-<distro>-<arch>-<data>.iso
+func (d *Distro) GetISOName() string {
+	timestamp := time.Now().Format("2006-01-02_1504") // Esempio: 2026-04-26_1700
+
+	// Puliamo il nome della distro (niente spazi, tutto minuscolo)
+	distroName := strings.ToLower(strings.ReplaceAll(d.DistroID, " ", "-"))
+
+	arch := d.Arch
+	if arch == "" {
+		arch = runtime.GOARCH
+	}
+
+	return fmt.Sprintf("egg-of-%s-%s-%s.iso", distroName, arch, timestamp)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 
 	"coa/pkg/distro"
 	"coa/pkg/engine"
@@ -63,6 +64,9 @@ and generate a precise execution plan for the OA engine.`,
 
 		// 1. Identità: Chi siamo?
 		myDistro := distro.NewDistro()
+		isoName := myDistro.GetISOName()
+		finalPath := filepath.Join(producePath, isoName)
+		LogCoala("L'uovo verrà generato in: %s", finalPath)
 
 		// 2. PILOT: Carichiamo lo spartito dal Brain
 		profile, err := pilot.DetectAndLoad()
@@ -74,7 +78,8 @@ and generate a precise execution plan for the OA engine.`,
 
 		// 3. ENGINE: Generiamo il piano JSON per oa
 		// NOTA: Passiamo stopAfter come 5° parametro al motore!
-		planPath, err := engine.GeneratePlan(profile.Remaster, myDistro.FamilyID, true, producePath, stopAfter)
+		planPath, err := engine.GeneratePlan(profile.Remaster, myDistro.FamilyID, true, producePath, finalPath, stopAfter)
+		// planPath, err := engine.GeneratePlan(profile.Remaster, myDistro.FamilyID, true, producePath, stopAfter)
 		if err != nil {
 			LogError("Impossibile generare il piano di volo: %v", err)
 			os.Exit(1)

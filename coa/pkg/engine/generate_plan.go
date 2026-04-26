@@ -5,12 +5,13 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"coa/pkg/pilot"
 )
 
 // GeneratePlan converte lo YAML in JSON. Ora accetta anche stopAfter!
-func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, workPath string, stopAfter string) (string, error) {
+func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, workPath string, finalIsoPath string, stopAfter string) (string, error) {
 	var plan OAPlan
 
 	// Definiamo l'utente classico "live/evolution"
@@ -34,6 +35,13 @@ func GeneratePlan(yamlSteps []pilot.YamlStep, familyID string, isRemaster bool, 
 		// ==========================================================
 		if hitBreakpoint && step.Name != "coa-cleanup" {
 			continue
+		}
+
+		// Sostituzione dinamica del percorso ISO nei comandi che lo richiedono
+		// Questo permette di usare ${ISO_OUTPUT} in qualsiasi comando dello YAML
+		currentRunCommand := step.RunCommand
+		if strings.Contains(currentRunCommand, "${ISO_OUTPUT}") {
+			currentRunCommand = strings.ReplaceAll(currentRunCommand, "${ISO_OUTPUT}", finalIsoPath)
 		}
 
 		// Traduzione da YAML a JSON

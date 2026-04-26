@@ -14,10 +14,11 @@ func buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion string) {
 	// Pulizia preventiva
 	os.RemoveAll(buildDir)
 
-	// Creazione struttura directory standard Debian [cite: 41]
+	// Creazione struttura directory standard Debian
+	// Spostiamo da /usr/local/bin a /usr/bin
 	dirs := []string{
 		filepath.Join(buildDir, "DEBIAN"),
-		filepath.Join(buildDir, "usr/local/bin"),
+		filepath.Join(buildDir, "usr/bin"), // <--- Destinazione di sistema
 		filepath.Join(buildDir, "usr/share/man/man1"),
 		filepath.Join(buildDir, "usr/share/bash-completion/completions"),
 		filepath.Join(buildDir, "usr/share/zsh/vendor-completions"),
@@ -28,15 +29,19 @@ func buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion string) {
 	}
 
 	// 1. Installazione binari e creazione alias eggs
-	copyFile(filepath.Join(oaDir, "oa"), filepath.Join(buildDir, "usr/local/bin/oa"))
-	copyFile(filepath.Join(coaDir, "coa"), filepath.Join(buildDir, "usr/local/bin/coa"))
-	os.Chmod(filepath.Join(buildDir, "usr/local/bin/oa"), 0755)
-	os.Chmod(filepath.Join(buildDir, "usr/local/bin/coa"), 0755)
+	// Usiamo /usr/bin per oa, coa e l'alias eggs
+	binPath := filepath.Join(buildDir, "usr/bin")
 
-	// Link simbolico per il comando eggs
-	os.Symlink("coa", filepath.Join(buildDir, "usr/local/bin/eggs"))
+	copyFile(filepath.Join(oaDir, "oa"), filepath.Join(binPath, "oa"))
+	copyFile(filepath.Join(coaDir, "coa"), filepath.Join(binPath, "coa"))
 
-	// 2. Documentazione (Man pages) [cite: 41]
+	os.Chmod(filepath.Join(binPath, "oa"), 0755)
+	os.Chmod(filepath.Join(binPath, "coa"), 0755)
+
+	// Link simbolico per il comando eggs (ora in /usr/bin)
+	os.Symlink("coa", filepath.Join(binPath, "eggs"))
+
+	// 2. Documentazione (Man pages)
 	manDir := filepath.Join(buildDir, "usr/share/man/man1")
 	exec.Command("sh", "-c", fmt.Sprintf("cp %s/docs/man/*.1 %s/ && gzip -9 %s/*.1", coaDir, manDir, manDir)).Run()
 
@@ -52,14 +57,13 @@ func buildDebianPackage(projRoot, oaDir, coaDir, pkgVersion string) {
 	os.Symlink("coa.fish", filepath.Join(buildDir, "usr/share/fish/vendor_completions.d/eggs.fish"))
 
 	// 4. FIX: Patch per l'autocompletamento Bash
-	// Aggiungiamo la riga che associa la funzione di coa all'alias eggs
 	f, err := os.OpenFile(bashTarget, os.O_APPEND|os.O_WRONLY, 0644)
 	if err == nil {
 		f.WriteString("\n# eggs alias completion support\ncomplete -o default -F __start_coa eggs\n")
 		f.Close()
 	}
 
-	// 5. Generazione file control [cite: 41]
+	// 5. Generazione file control
 	controlContent := fmt.Sprintf(`Package: oa-tools
 Version: %s
 Architecture: amd64
@@ -71,15 +75,16 @@ Description: coa is the mind and oa the arm
 
 	os.WriteFile(filepath.Join(buildDir, "DEBIAN", "control"), []byte(controlContent), 0644)
 
-	// 6. Impacchettamento [cite: 41]
-	fmt.Println("\033[1;34m[build]\033[0m Packing .deb archive...")
+	// 6. Impacchettamento
+	fmt.Printf("\033[1;34m[build]\033[0m Packing .deb archive (%s)...\n", pkgVersion)
 	dpkgCmd := exec.Command("dpkg-deb", "--build", buildDir)
-	dpkgCmd.Stdout, dpkgCmd.Stderr = os.Stdout, os.Stderr
 	dpkgCmd.Run()
 
 	// Spostamento del pacchetto finale nella root del progetto
 	debFile := pkgName + ".deb"
 	finalTarget := filepath.Join(projRoot, debFile)
+
+	// Utilizziamo os.Rename o leggiamo il file appena creato in /tmp
 	data, _ := os.ReadFile(filepath.Join("/tmp", debFile))
 	os.WriteFile(finalTarget, data, 0644)
 
@@ -87,5 +92,5 @@ Description: coa is the mind and oa the arm
 	os.RemoveAll(buildDir)
 	os.Remove(filepath.Join("/tmp", debFile))
 
-	fmt.Printf("\033[1;32m[SUCCESS]\033[0m Package created: \033[1m%s\033[0m\n", finalTarget)
+	fmt.Printf("%s[SUCCESS]%s Package created: %s\n", ColorGreen, ColorReset, finalTarget)
 }
